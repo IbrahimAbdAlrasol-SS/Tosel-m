@@ -4,6 +4,7 @@ class RegistrationZone {
   RegistrationGovernorate? governorate;
   bool? deleted;
   String? creationDate;
+  int? type; // إضافة خاصية type
 
   RegistrationZone({
     this.id,
@@ -11,6 +12,7 @@ class RegistrationZone {
     this.governorate,
     this.deleted,
     this.creationDate,
+    this.type, // إضافة في Constructor
   });
 
   factory RegistrationZone.fromJson(Map<String, dynamic> json) {
@@ -22,6 +24,7 @@ class RegistrationZone {
           : null,
       deleted: json['deleted'],
       creationDate: json['creationDate'],
+      type: json['type'], // إضافة في fromJson
     );
   }
 
@@ -32,12 +35,13 @@ class RegistrationZone {
       'governorate': governorate?.toJson(),
       'deleted': deleted,
       'creationDate': creationDate,
+      'type': type, // إضافة في toJson
     };
   }
 
   @override
   String toString() {
-    return 'RegistrationZone(id: $id, name: $name, governorate: ${governorate?.name})';
+    return 'RegistrationZone(id: $id, name: $name, governorate: ${governorate?.name}, type: $type)';
   }
 
   @override

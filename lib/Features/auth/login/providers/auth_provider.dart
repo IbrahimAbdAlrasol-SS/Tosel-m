@@ -1,50 +1,77 @@
-import 'dart:async';
-import 'package:Tosell/Features/auth/Services/Auth_service.dart';
 import 'package:Tosell/Features/auth/models/User.dart';
-import 'package:Tosell/core/helpers/SharedPreferencesHelper.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:Tosell/core/Client/BaseClient.dart';
 
-part 'auth_provider.g.dart';
+class AuthService {
+  final BaseClient<User> baseClient;
 
-@riverpod
-class authNotifier extends _$authNotifier {
-  final AuthService _service = AuthService();
+  AuthService()
+      : baseClient = BaseClient<User>(fromJson: (json) => User.fromJson(json));
 
-  Future<(User? data, String? error)> login({
-     String? phonNumber,
-    required String passWord,
-  }) async {
+  Future<(User? data, String? error)> login(
+      {String? phoneNumber, required String password}) async {
     try {
-      state = const AsyncValue.loading(); // Set loading state
-      final (user, error) = await _service.login(
-        phoneNumber: phonNumber,
-        password: passWord,
-      );
-      if (user == null) {
-        state = const AsyncValue.data(null); //? to stop loading state
-        return (null, error);
-      }
-      await SharedPreferencesHelper.saveUser(user);
-      state = AsyncValue.data(user);
-      return (user, error);
-    } catch (e, stackTrace) {
-      state = AsyncValue.error(e, stackTrace);
+      var result = await baseClient.create(endpoint: '/auth/login', data: {
+        'phoneNumber': phoneNumber,
+        'password': password,
+      });
+
+      if (result.singleData == null) return (null, result.message);
+      return (result.getSingle, null);
+    } catch (e) {
       return (null, e.toString());
     }
   }
 
-  Future<void> register(User form, String passWord) async {
-    state = const AsyncValue.loading();
+  /// الدالة الأصلية للتسجيل - يجب الاحتفاظ بها للـ AuthProvider الموجود
+  Future<(User? data, String? error)> register(
+      User user, String passWord) async {
     try {
-      final user = await _service.register(form, passWord);
-      state = AsyncValue.data(user.$1); // Store logged-in user
-    } catch (e, stackTrace) {
-      state = AsyncValue.error(e, stackTrace); // Handle error
+      var result = await baseClient.create(
+        endpoint: '/auth/merchant-register',
+        data: {...user.toJson(), 'password': passWord},
+      );
+      // if (result.singleData == null) return User();
+      if (result.getSingle == null) return (null, result.message);
+      return (result.singleData, null);
+    } catch (e) {
+      return (null, e.toString());
     }
   }
 
-  @override
-  FutureOr<void> build() async {
-    return;
+  /// تسجيل تاجر جديد - الدالة الجديدة المحسنة
+  Future<(User? data, String? error)> registerMerchant({
+    required String fullName,
+    required String brandName,
+    required String userName,
+    required String phoneNumber,
+    required String password,
+    required String brandImg,
+    required List<Map<String, dynamic>> zones,
+    required int type,
+  }) async {
+    try {
+      final data = {
+        'merchantId': null, // يتم توليده من الباك اند
+        'fullName': fullName,
+        'brandName': brandName,
+        'brandImg': brandImg,
+        'userName': userName,
+        'phoneNumber': phoneNumber,
+        'img': brandImg, // نفس الصورة حسب التوضيح
+        'zones': zones,
+        'password': password,
+        'type': type,
+      };
+
+      var result = await baseClient.create(
+        endpoint: '/auth/merchant-register',
+        data: data,
+      );
+
+      if (result.singleData == null) return (null, result.message);
+      return (result.getSingle, null);
+    } catch (e) {
+      return (null, e.toString());
+    }
   }
 }
