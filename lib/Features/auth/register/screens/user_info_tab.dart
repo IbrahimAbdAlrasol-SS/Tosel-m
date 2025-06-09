@@ -39,14 +39,13 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
   final _passwordFocus = FocusNode();
   final _confirmPasswordFocus = FocusNode();
 
-  // State
+
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
   @override
   void initState() {
     super.initState();
-    // تحميل البيانات المحفوظة إذا كانت موجودة
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final state = ref.read(registrationNotifierProvider);
       _fullNameController.text = state.fullName ?? '';
@@ -90,7 +89,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
       if (image != null) {
         ref.read(registrationNotifierProvider.notifier).setBrandImage(image);
         
-        // رفع الصورة فوراً
         final success = await ref
             .read(registrationNotifierProvider.notifier)
             .uploadBrandImage();
@@ -121,7 +119,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
   Future<void> _handleNext() async {
     _saveCurrentData();
 
-    // التحقق من صحة البيانات
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -141,7 +138,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
       return;
     }
 
-    // إذا لم يتم رفع الصورة بعد، قم برفعها الآن
     final state = ref.read(registrationNotifierProvider);
     if (state.brandImage != null && state.uploadedImageUrl == null) {
       final success = await ref
@@ -158,7 +154,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
       }
     }
 
-    // الانتقال للخطوة التالية
     widget.onNext?.call();
   }
 
@@ -173,7 +168,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
         key: _formKey,
         child: Column(
           children: [
-            // اسم صاحب المتجر
             CustomTextFormField(
               controller: _fullNameController,
               focusNode: _fullNameFocus,
@@ -203,7 +197,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
             
             const Gap(AppSpaces.medium),
             
-            // اسم المتجر
             CustomTextFormField(
               controller: _brandNameController,
               focusNode: _brandNameFocus,
@@ -232,7 +225,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
             
             const Gap(AppSpaces.medium),
             
-            // اسم المستخدم
             CustomTextFormField(
               controller: _userNameController,
               focusNode: _userNameFocus,
@@ -253,7 +245,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
                 if (value!.trim().length < 3) {
                   return "اسم المستخدم قصير جداً";
                 }
-                // التحقق من أنه ليس مجرد رموز
                 final hasLetters = RegExp(r'[a-zA-Z\u0600-\u06FF]').hasMatch(value);
                 if (!hasLetters) {
                   return "اسم المستخدم يجب أن يحتوي على أحرف";
@@ -266,7 +257,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
             
             const Gap(AppSpaces.medium),
             
-            // رقم الهاتف
             CustomTextFormField(
               controller: _phoneController,
               focusNode: _phoneFocus,
@@ -284,7 +274,7 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
                 if (value?.trim().isEmpty ?? true) {
                   return "رقم الهاتف مطلوب";
                 }
-                // التحقق من صيغة الرقم العراقي
+                
                 final phoneRegex = RegExp(r'^(07[0-9]{9}|07[0-9]{8})$');
                 if (!phoneRegex.hasMatch(value!.replaceAll(' ', ''))) {
                   return "رقم الهاتف غير صحيح";
@@ -297,7 +287,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
             
             const Gap(AppSpaces.medium),
             
-            // صورة المتجر
             CustomTextFormField(
               readOnly: true,
               label: "شعار / صورة المتجر",
@@ -347,7 +336,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
             
             const Gap(AppSpaces.medium),
             
-            // كلمة المرور
             CustomTextFormField(
               controller: _passwordController,
               focusNode: _passwordFocus,
@@ -368,7 +356,7 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
                   child: SvgPicture.asset(
                     _obscurePassword
                         ? "assets/svg/10. EyeSlash.svg"
-                        : "assets/svg/10. EyeSlash.svg", // استخدام نفس الأيقونة مؤقتاً
+                        : "assets/svg/10. EyeSlash.svg", 
                   ),
                 ),
               ),
@@ -387,7 +375,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
             
             const Gap(AppSpaces.medium),
             
-            // تأكيد كلمة المرور
             CustomTextFormField(
               controller: _confirmPasswordController,
               focusNode: _confirmPasswordFocus,
@@ -408,7 +395,7 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
                   child: SvgPicture.asset(
                     _obscureConfirmPassword
                         ? "assets/svg/10. EyeSlash.svg"
-                        : "assets/svg/10. EyeSlash.svg", // استخدام نفس الأيقونة مؤقتاً
+                        : "assets/svg/10. EyeSlash.svg",
                   ),
                 ),
               ),
@@ -427,7 +414,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
             
             const Gap(30),
             
-            // زر التالي
             Container(
               alignment: Alignment.bottomLeft,
               child: FillButton(

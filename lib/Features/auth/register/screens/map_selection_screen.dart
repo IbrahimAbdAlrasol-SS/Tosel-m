@@ -29,7 +29,7 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
   @override
   void initState() {
     super.initState();
-    selectedLatitude = widget.initialLatitude ?? 33.3152; // بغداد افتراضي
+    selectedLatitude = widget.initialLatitude ?? 33.3152; 
     selectedLongitude = widget.initialLongitude ?? 44.3661;
     isLocationSelected = widget.initialLatitude != null;
   }
@@ -77,10 +77,8 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
                 borderRadius: AppSpaces.mediumRadius,
                 child: Stack(
                   children: [
-                    // خريطة مؤقتة - سيتم استبدالها بـ Google Maps
                     _buildTemporaryMap(),
 
-                    // مؤشر الموقع
                     if (isLocationSelected)
                       Center(
                         child: Column(
@@ -112,7 +110,6 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
                         ),
                       ),
 
-                    // تعليمات الاستخدام
                     Positioned(
                       top: 16,
                       left: 16,
@@ -151,7 +148,6 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
                       ),
                     ),
 
-                    // معلومات الإحداثيات
                     if (isLocationSelected)
                       Positioned(
                         bottom: 16,
@@ -192,7 +188,6 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
             ),
           ),
 
-          // أزرار التحكم
           Container(
             padding: AppSpaces.allMedium,
             decoration: BoxDecoration(
@@ -234,7 +229,6 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
   Widget _buildTemporaryMap() {
     return GestureDetector(
       onTapDown: (details) {
-        // حساب الإحداثيات بناءً على موقع النقر
         final RenderBox box = context.findRenderObject() as RenderBox;
         final localPosition = details.localPosition;
         

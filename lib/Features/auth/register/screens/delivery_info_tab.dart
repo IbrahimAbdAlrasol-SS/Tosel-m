@@ -507,10 +507,10 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'سيتم فتح منتقي الموقع',
+          'سيتم فتح  الموقع',
           style: TextStyle(fontFamily: "Tajawal"),
         ),
-        duration: Duration(seconds: 2),
+        duration: Duration(seconds:1),
       ),
     );
   }
