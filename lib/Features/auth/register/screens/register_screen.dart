@@ -145,7 +145,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                const Gap(20),
+                const Gap(5),
                 _buildTabBar(),
                 _buildTabBarView(),
               ],
@@ -183,7 +183,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
                   label,
                   style: TextStyle(

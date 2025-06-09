@@ -1,10 +1,7 @@
 import 'package:Tosell/Features/auth/register/models/registration_zone.dart';
 import 'package:Tosell/core/Client/BaseClient.dart';
-
 class RegistrationZoneService {
   final BaseClient<RegistrationZone> _baseClient;
-  
-  // Cache ذكي مع إمكانية Force Refresh
   List<RegistrationZone>? _allZonesCache;
   DateTime? _cacheTime;
   static const Duration _cacheDuration = Duration(minutes: 3);
@@ -13,251 +10,143 @@ class RegistrationZoneService {
       : _baseClient = BaseClient<RegistrationZone>(
           fromJson: (json) => RegistrationZone.fromJson(json)
         );
-
-  /// جلب كل المناطق مع إمكانية Force Refresh
   Future<List<RegistrationZone>> _getAllZonesWithoutFilter({bool forceRefresh = false}) async {
     try {
-      // تحقق من صلاحية الـ cache (إلا إذا كان force refresh)
       final now = DateTime.now();
       final isCacheValid = !forceRefresh && 
           _allZonesCache != null && 
           _cacheTime != null && 
           now.difference(_cacheTime!) < _cacheDuration;
-      
+      // طول ما الكاش بي بيانات جيبهن منه حته ما تلود ع السيرفر
       if (isCacheValid) {
-        print('⚡ استخدام البيانات من الـ cache (${_allZonesCache!.length} منطقة)');
         return _allZonesCache!;
       }
-      
-      // جلب البيانات من API
       Map<String, dynamic> queryParams = {
         'pageSize': 1000,
-        'timestamp': now.millisecondsSinceEpoch, // منع الـ browser cache
+        'timestamp': now.millisecondsSinceEpoch,
       };
-      
-      print('🌍 ${forceRefresh ? "Force refresh" : "جلب"} كل المناطق من الـ API...');
-      print('📤 Parameters: $queryParams');
 
       final result = await _baseClient.getAll(
         endpoint: '/zone',
         queryParams: queryParams,
       );
-      
-      // حفظ في الـ cache
+      // خزن البيانات الجديدة بالكاش
       _allZonesCache = result.getList;
       _cacheTime = now;
-      
-      print('📥 تم تحديث البيانات: ${_allZonesCache!.length} منطقة');
-      
       return _allZonesCache!;
     } catch (e) {
-      print('❌ خطأ في جلب البيانات: $e');
-      // إذا حدث خطأ وعندنا cache قديم، استخدمه
+      // لو صار خطأ، ارجع اللي عندك بالكاش 
       return _allZonesCache ?? [];
     }
   }
 
-  /// البحث في المناطق للتسجيل (مع فلتر API للمناطق)
-  Future<List<RegistrationZone>> searchZones({String? query}) async {
-    try {
-      Map<String, dynamic>? queryParams;
-      
-      // إضافة parameter البحث إذا كان موجود
-      if (query != null && query.isNotEmpty) {
-        queryParams = {
-          'filter': query,  // استخدام filter parameter للمناطق
-          'pageSize': 100, 
-        };
-      } else {
-        queryParams = {'pageSize': 100}; // حتى بدون بحث، جلب 100 نتيجة
-      }
-
-      print('🔍 البحث في المناطق عن: "$query"');
-      print('📤 Parameters: $queryParams');
-
-      final result = await _baseClient.getAll(
-        endpoint: '/zone',
-        queryParams: queryParams,
-      );
-      
-      print('📥 النتائج: ${result.getList.length} منطقة');
-      for (var zone in result.getList.take(5)) {
-        print('   - ${zone.name} (${zone.governorate?.name})');
-      }
-      
-      return result.getList;
-    } catch (e) {
-      print('❌ خطأ في البحث: $e');
-      return [];
-    }
-  }
-
-  /// جلب المحافظات مع بحث محسن وrefresh فوري
+  // هاي الميثود تجيب المحافظات وتفلترهم حسب البحث
   Future<List<RegistrationGovernorate>> getGovernorates({
     String? query, 
     bool forceRefresh = false
   }) async {
     try {
-      print('🏛️ بحث المحافظات: "${query ?? "الكل"}" ${forceRefresh ? "(force refresh)" : ""}');
-      
-      // جلب البيانات (مع force refresh إذا كان مطلوب)
+      final queryText = query?.trim() ?? '';
       final zones = await _getAllZonesWithoutFilter(forceRefresh: forceRefresh);
-      
-      // استخراج المحافظات الفريدة
       final Map<int, RegistrationGovernorate> uniqueGovernorates = {};
-      
+      // استخرج المحافظات  من المناطق (ما نريد تكرار)
       for (final zone in zones) {
         if (zone.governorate != null && zone.governorate!.id != null) {
           final gov = zone.governorate!;
           uniqueGovernorates[gov.id!] = gov;
         }
       }
-      
       var allGovernorates = uniqueGovernorates.values.toList();
-      
-      // فلترة محلية محسنة (تدعم البحث الجزئي)
-      if (query != null && query.trim().isNotEmpty) {
-        final searchQuery = query.trim().toLowerCase();
+      allGovernorates.sort((a, b) => (a.name ?? '').compareTo(b.name ?? ''));
+      if (queryText.isNotEmpty) {
+        final searchQuery = queryText.toLowerCase();
         allGovernorates = allGovernorates.where((gov) {
           final govName = (gov.name ?? '').toLowerCase();
           return govName.contains(searchQuery) || 
                  govName.startsWith(searchQuery) ||
                  _isArabicMatch(govName, searchQuery);
         }).toList();
-        
-        print('🔍 فلترة محلية: "$query" → ${allGovernorates.length} نتيجة');
-      }
-      
-      // ترتيب النتائج (الأقرب للبحث أولاً)
-      if (query != null && query.trim().isNotEmpty) {
-        final searchQuery = query.trim().toLowerCase();
         allGovernorates.sort((a, b) {
           final aName = (a.name ?? '').toLowerCase();
           final bName = (b.name ?? '').toLowerCase();
-          
-          // الذي يبدأ بالبحث أولاً
           final aStarts = aName.startsWith(searchQuery);
           final bStarts = bName.startsWith(searchQuery);
-          
           if (aStarts && !bStarts) return -1;
           if (!aStarts && bStarts) return 1;
-          
           return aName.compareTo(bName);
         });
-      }
-      
-      print('🏛️ النتيجة: ${allGovernorates.length} محافظة');
-      for (var gov in allGovernorates.take(5)) {
-        print('   ✓ ${gov.name}');
-      }
-      
+      } else {
+// اذا ماكو نتائج جيب اول 10 
+        allGovernorates = allGovernorates.take(10).toList();
+      }   
       return allGovernorates;
     } catch (e) {
-      print('❌ خطأ في جلب المحافظات: $e');
       return [];
     }
   }
 
-  /// جلب المناطق لمحافظة محددة مع بحث محسن
+  // هاي الميثود تجيب المناطق حسب المحافظة المختارة
   Future<List<RegistrationZone>> getZonesByGovernorate({
     required int governorateId,
     String? query,
     bool forceRefresh = false,
   }) async {
     try {
-      print('🌍 بحث المناطق للمحافظة $governorateId: "${query ?? "الكل"}" ${forceRefresh ? "(force refresh)" : ""}');
-      
-      // جلب البيانات (مع force refresh إذا كان مطلوب)
-      final allZones = await _getAllZonesWithoutFilter(forceRefresh: forceRefresh);
-      
-      // فلترة المناطق للمحافظة المحددة
+      final queryText = query?.trim() ?? '';
+      final allZones = await _getAllZonesWithoutFilter(forceRefresh: forceRefresh); 
+      // فلتر المناطق حسب المحافظة
       var zonesInGovernorate = allZones.where((zone) => 
         zone.governorate?.id == governorateId
       ).toList();
-      
-      // فلترة محلية محسنة للمناطق
-      if (query != null && query.trim().isNotEmpty) {
-        final searchQuery = query.trim().toLowerCase();
+      zonesInGovernorate.sort((a, b) => (a.name ?? '').compareTo(b.name ?? ''));
+      // لو في بحث، فلتر أكثر
+      if (queryText.isNotEmpty) {
+        final searchQuery = queryText.toLowerCase();
         zonesInGovernorate = zonesInGovernorate.where((zone) {
           final zoneName = (zone.name ?? '').toLowerCase();
           return zoneName.contains(searchQuery) || 
                  zoneName.startsWith(searchQuery) ||
                  _isArabicMatch(zoneName, searchQuery);
         }).toList();
-        
-        print('🔍 فلترة محلية للمناطق: "$query" → ${zonesInGovernorate.length} نتيجة');
-      }
-      
-      // ترتيب النتائج (الأقرب للبحث أولاً)
-      if (query != null && query.trim().isNotEmpty) {
-        final searchQuery = query.trim().toLowerCase();
         zonesInGovernorate.sort((a, b) {
           final aName = (a.name ?? '').toLowerCase();
           final bName = (b.name ?? '').toLowerCase();
-          
-          // الذي يبدأ بالبحث أولاً
           final aStarts = aName.startsWith(searchQuery);
           final bStarts = bName.startsWith(searchQuery);
           
           if (aStarts && !bStarts) return -1;
           if (!aStarts && bStarts) return 1;
-          
           return aName.compareTo(bName);
         });
-      }
-      
-      print('🌍 النتيجة: ${zonesInGovernorate.length} منطقة');
-      for (var zone in zonesInGovernorate.take(5)) {
-        print('   ✓ ${zone.name}');
-      }
-      
+      } else {
+        zonesInGovernorate = zonesInGovernorate.take(10).toList();
+      } 
       return zonesInGovernorate;
     } catch (e) {
-      print('❌ خطأ في جلب المناطق: $e');
       return [];
     }
   }
-
-  /// تحسين البحث العربي (يدعم البحث الجزئي)
+  // تطوير البخث , في حال كتب نصوص تحوي حركات 
   bool _isArabicMatch(String text, String query) {
-    // إزالة التشكيل والمسافات الزائدة
-    final cleanText = text.replaceAll(RegExp(r'[ًٌٍَُِّْ\s]+'), '');
-    final cleanQuery = query.replaceAll(RegExp(r'[ًٌٍَُِّْ\s]+'), '');
-    
-    // البحث في الكلمات المنفصلة
-    final textWords = cleanText.split(' ').where((w) => w.isNotEmpty);
-    final queryWords = cleanQuery.split(' ').where((w) => w.isNotEmpty);
-    
+    final cleanText = text.replaceAll(RegExp(r'[ًٌٍَُِّْ\s]+'), '');  
+    final cleanQuery = query.replaceAll(RegExp(r'[ًٌٍَُِّْ\s]+'), ''); 
+    final textWords = cleanText.split(' ').where((w) => w.isNotEmpty); // احجي ويه ابو الباك عليهن 
+    final queryWords = cleanQuery.split(' ').where((w) => w.isNotEmpty); // هاي هم 
     return queryWords.every((queryWord) => 
         textWords.any((textWord) => textWord.contains(queryWord))
     );
   }
-
-  /// مسح الـ cache وإجبار تحديث البيانات
+  // هاي الميثود تمسح الكاش (لو تريد بيانات جديدة)
   void clearCache() {
     _allZonesCache = null;
     _cacheTime = null;
-    print('🗑️ تم مسح الـ cache - سيتم جلب البيانات الجديدة');
+
   }
 
-  /// تحديث البيانات فوراً (force refresh)
   Future<void> refreshData() async {
-    print('🔄 بدء تحديث البيانات...');
     clearCache();
     await _getAllZonesWithoutFilter(forceRefresh: true);
-    print('✅ تم تحديث البيانات بنجاح');
+
   }
 
-  /// التحقق من حالة الـ cache
-  bool get isCacheValid {
-    if (_allZonesCache == null || _cacheTime == null) return false;
-    final now = DateTime.now();
-    return now.difference(_cacheTime!) < _cacheDuration;
-  }
-
-  /// الحصول على عدد المناطق في الـ cache
-  int get cachedZonesCount => _allZonesCache?.length ?? 0;
-
-  /// الحصول على وقت آخر تحديث للـ cache
-  DateTime? get lastUpdateTime => _cacheTime;
 }

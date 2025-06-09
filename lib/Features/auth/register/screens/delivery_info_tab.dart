@@ -7,23 +7,19 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:Tosell/core/widgets/CustomTextFormField.dart';
 import 'package:Tosell/Features/auth/register/models/registration_zone.dart';
 import 'package:Tosell/Features/auth/register/services/registration_zone_service.dart';
-import 'package:Tosell/core/widgets/custom_search_drop_down.dart'; // إضافة الـ import المفقود
-
+import 'package:Tosell/core/widgets/custom_search_drop_down.dart';
 class DeliveryInfoTab extends StatefulWidget {
   const DeliveryInfoTab({super.key});
 
   @override
   State<DeliveryInfoTab> createState() => _DeliveryInfoTabState();
 }
-
 class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
   Set<int> expandedTiles = {};
   List<DeliveryLocation> deliveryLocations = [DeliveryLocation()];
   
-  // خدمة البحث في المناطق
   final RegistrationZoneService _zoneService = RegistrationZoneService();
   
-  // تتبع آخر بحث لكل dropdown لتحسين الـ force refresh
   Map<int, String?> _lastGovernorateQuery = {};
   Map<int, String?> _lastZoneQuery = {};
 
@@ -47,14 +43,13 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
 
             const SizedBox(height: 12),
             _buildAddLocationButton(),
-            const Gap(8),
-            _buildRefreshButton(),
+            
+            
           ],
         ),
       ),
     );
   }
-
   Widget _buildLocationCard(int index, ThemeData theme) {
     bool isExpanded = expandedTiles.contains(index);
 
@@ -141,7 +136,6 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
       ),
     );
   }
-
   Widget _buildGovernorateDropdown(int index) {
     return RegistrationSearchDropDown<RegistrationGovernorate>(
       label: "المحافظة",
@@ -149,30 +143,27 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
       selectedValue: deliveryLocations[index].selectedGovernorate,
       itemAsString: (gov) => gov.name ?? '',
       asyncItems: (query) async {
-        // Force refresh في أول بحث أو عند تغيير الـ query بشكل كبير
-        final shouldForceRefresh = query.length == 1 || 
-            (_lastGovernorateQuery[index] != null && 
-             (_lastGovernorateQuery[index]!.isEmpty || 
-              !query.startsWith(_lastGovernorateQuery[index]!)));
+        print('🔍 طلب بحث المحافظات: "$query"');
+        
+        // force refresh
+        final isNewSearch = query.isNotEmpty && query != (_lastGovernorateQuery[index] ?? '');
+        final shouldForceRefresh = isNewSearch && 
+            (_lastGovernorateQuery[index] == null || query.length <= 2);
         
         _lastGovernorateQuery[index] = query;
         
         return await _zoneService.getGovernorates(
-          query: query, 
+          query: query.isEmpty ? null : query, //    أول 10
           forceRefresh: shouldForceRefresh,
         );
       },
       onChanged: (governorate) {
         setState(() {
           deliveryLocations[index].selectedGovernorate = governorate;
-          deliveryLocations[index].selectedZone = null; // إعادة تعيين المنطقة
-          _lastZoneQuery[index] = null; // مسح آخر بحث للمناطق
+          deliveryLocations[index].selectedZone = null; // إعادة تعيين 
+          _lastZoneQuery[index] = null; // مسح آخر بحث 
         });
         
-        // مسح cache المناطق عند تغيير المحافظة
-        if (governorate != null) {
-          _zoneService.clearCache();
-        }
       },
       itemBuilder: (context, governorate) => Row(
         children: [
@@ -182,24 +173,25 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
             size: 18,
           ),
           const Gap(8),
-          Text(
-            governorate.name ?? '',
-            style: const TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 16,
+          Expanded(
+            child: Text(
+              governorate.name ?? '',
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 16,
+                fontFamily: "Tajawal",
+              ),
             ),
           ),
         ],
       ),
-      emptyText: "لا توجد محافظات مطابقة",
+      emptyText: "", // في حال احتاجيتوا تكتبون شي في حال ماكو محافظة أو المنطقة
       errorText: "خطأ في تحميل المحافظات",
       enableRefresh: true,
     );
   }
-
   Widget _buildZoneDropdown(int index) {
     final selectedGov = deliveryLocations[index].selectedGovernorate;
-    
     return RegistrationSearchDropDown<RegistrationZone>(
       label: "المنطقة",
       hint: selectedGov == null 
@@ -208,19 +200,19 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
       selectedValue: deliveryLocations[index].selectedZone,
       itemAsString: (zone) => zone.name ?? '',
       asyncItems: (query) async {
-        if (selectedGov?.id == null) return [];
-        
-        // Force refresh في أول بحث أو عند تغيير الـ query بشكل كبير
-        final shouldForceRefresh = query.length == 1 || 
-            (_lastZoneQuery[index] != null && 
-             (_lastZoneQuery[index]!.isEmpty || 
-              !query.startsWith(_lastZoneQuery[index]!)));
+        if (selectedGov?.id == null) {
+          return [];
+        }         
+        //force refresh
+        final isNewSearch = query.isNotEmpty && query != (_lastZoneQuery[index] ?? '');
+        final shouldForceRefresh = isNewSearch && 
+            (_lastZoneQuery[index] == null || query.length <= 2);
         
         _lastZoneQuery[index] = query;
         
         return await _zoneService.getZonesByGovernorate(
           governorateId: selectedGov!.id!,
-          query: query,
+          query: query.isEmpty ? null : query, //    أول 10
           forceRefresh: shouldForceRefresh,
         );
       },
@@ -246,6 +238,7 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
                   style: const TextStyle(
                     fontWeight: FontWeight.w500,
                     fontSize: 16,
+                    fontFamily: "Tajawal",
                   ),
                 ),
               ),
@@ -261,15 +254,14 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
                   color: context.colorScheme.secondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w400,
+                  fontFamily: "Tajawal",
                 ),
               ),
             ),
           ],
         ],
       ),
-      emptyText: selectedGov == null 
-          ? "اختر المحافظة أولاً"
-          : "لا توجد مناطق مطابقة",
+      emptyText: "",
       errorText: "خطأ في تحميل المناطق",
       enableRefresh: true,
     );
@@ -354,7 +346,6 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
       ],
     );
   }
-
   Widget _buildDailyOrderRateDropdown(int index) {
     return CustomTextFormField<int>(
       label: "معدل الطلبات اليومي المتوقع",
@@ -418,6 +409,7 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
                       fontWeight: FontWeight.w400,
                       fontSize: 14,
                       color: context.colorScheme.primary,
+                      fontFamily: "Tajawal",
                     ),
                   ),
                 ],
@@ -428,21 +420,15 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
       ),
     );
   }
-
   void _removeLocation(int index) {
     setState(() {
       deliveryLocations.removeAt(index);
       expandedTiles.remove(index);
-      
-      // تنظيف بيانات البحث المحفوظة
       _lastGovernorateQuery.remove(index);
-      _lastZoneQuery.remove(index);
-      
-      // إعادة ترتيب المؤشرات
+      _lastZoneQuery.remove(index);     
       final newExpandedTiles = <int>{};
       final newGovernorateQuery = <int, String?>{};
-      final newZoneQuery = <int, String?>{};
-      
+      final newZoneQuery = <int, String?>{};     
       for (final expandedIndex in expandedTiles) {
         if (expandedIndex > index) {
           newExpandedTiles.add(expandedIndex - 1);
@@ -450,8 +436,6 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
           newExpandedTiles.add(expandedIndex);
         }
       }
-      
-      // إعادة ترتيب بيانات البحث
       _lastGovernorateQuery.forEach((key, value) {
         if (key > index) {
           newGovernorateQuery[key - 1] = value;
@@ -459,7 +443,6 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
           newGovernorateQuery[key] = value;
         }
       });
-      
       _lastZoneQuery.forEach((key, value) {
         if (key > index) {
           newZoneQuery[key - 1] = value;
@@ -467,29 +450,19 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
           newZoneQuery[key] = value;
         }
       });
-      
       expandedTiles = newExpandedTiles;
       _lastGovernorateQuery = newGovernorateQuery;
       _lastZoneQuery = newZoneQuery;
     });
-    
-    print('🗑️ تم حذف الموقع $index وتنظيف بياناته');
-  }
+      }
 
-  /// تحديث شامل لجميع البيانات - إصلاح الدالة
-  Future<void> _refreshAllData() async {
-    print('🔄 بدء تحديث شامل للبيانات...');
-    
+  Future<void> _refreshAllData() async { 
     try {
       // مسح كل الـ cache
       _zoneService.clearCache();
       _lastGovernorateQuery.clear();
       _lastZoneQuery.clear();
-      
-      // إعادة تحميل البيانات
       await _zoneService.refreshData();
-      
-      // إظهار رسالة نجاح
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -497,7 +470,10 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 const Gap(8),
-                Text('تم تحديث البيانات بنجاح'),
+                Text(
+                  'تم تحديث البيانات بنجاح',
+                  style: TextStyle(fontFamily: "Tajawal"),
+                ),
               ],
             ),
             backgroundColor: Colors.green,
@@ -505,12 +481,7 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
           ),
         );
       }
-      
-      print('✅ تم التحديث الشامل بنجاح');
     } catch (e) {
-      print('❌ خطأ في التحديث: $e');
-      
-      // إظهار رسالة خطأ
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -518,7 +489,10 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
               children: [
                 Icon(Icons.error, color: Colors.white),
                 const Gap(8),
-                Text('حدث خطأ أثناء التحديث'),
+                Text(
+                  'حدث خطأ أثناء التحديث',
+                  style: TextStyle(fontFamily: "Tajawal"),
+                ),
               ],
             ),
             backgroundColor: Colors.red,
@@ -528,73 +502,31 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
       }
     }
   }
-
-  Widget _buildRefreshButton() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Container(
-          width: 120.w,
-          height: 32.h,
-          decoration: BoxDecoration(
-            color: Colors.blue.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(60),
-            border: Border.all(color: Colors.blue),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(60),
-            onTap: _refreshAllData,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.refresh,
-                    color: Colors.blue,
-                    size: 16,
-                  ),
-                  const Gap(4),
-                  Text(
-                    "تحديث البيانات",
-                    style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 12,
-                      color: Colors.blue,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
+  
   void _openLocationPicker() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('سيتم فتح منتقي الموقع'),
+      SnackBar(
+        content: Text(
+          'سيتم فتح منتقي الموقع',
+          style: TextStyle(fontFamily: "Tajawal"),
+        ),
         duration: Duration(seconds: 2),
       ),
     );
   }
-
-  /// الحصول على بيانات التوصيل المحفوظة
   List<Map<String, dynamic>> getDeliveryData() {
     return deliveryLocations.map((location) => location.toJson()).toList();
   }
-
-  /// التحقق من صحة البيانات
   bool validateData() {
     for (int i = 0; i < deliveryLocations.length; i++) {
       final location = deliveryLocations[i];
       if (location.selectedGovernorate == null || location.selectedZone == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('يرجى إكمال بيانات الموقع ${i + 1}'),
+            content: Text(
+              'يرجى إكمال بيانات الموقع ${i + 1}',
+              style: TextStyle(fontFamily: "Tajawal"),
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -604,8 +536,6 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
     return true;
   }
 }
-
-/// كلاس لحفظ بيانات موقع التوصيل
 class DeliveryLocation {
   RegistrationGovernorate? selectedGovernorate;
   RegistrationZone? selectedZone;
@@ -618,7 +548,6 @@ class DeliveryLocation {
     this.nearestPoint,
     this.dailyOrderRate = 0,
   });
-
   Map<String, dynamic> toJson() {
     return {
       'governorate': selectedGovernorate?.toJson(),

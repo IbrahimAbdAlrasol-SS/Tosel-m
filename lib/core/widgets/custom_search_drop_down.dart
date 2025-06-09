@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:Tosell/core/constants/spaces.dart';
 import 'package:Tosell/core/utils/extensions.dart';
-
 class RegistrationSearchDropDown<T> extends StatefulWidget {
   final String label;
   final String hint;
@@ -16,7 +15,6 @@ class RegistrationSearchDropDown<T> extends StatefulWidget {
   final String emptyText;
   final String errorText;
   final bool enableRefresh;
-
   const RegistrationSearchDropDown({
     super.key,
     required this.label,
@@ -31,17 +29,14 @@ class RegistrationSearchDropDown<T> extends StatefulWidget {
     this.errorText = "حدث خطأ أثناء البحث",
     this.enableRefresh = true,
   });
-
   @override
   State<RegistrationSearchDropDown<T>> createState() => _RegistrationSearchDropDownState<T>();
 }
-
 class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDown<T>>
     with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final LayerLink _layerLink = LayerLink();
-  
   OverlayEntry? _overlayEntry;
   List<T> _suggestions = [];
   bool _isLoading = false;
@@ -50,10 +45,9 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
   T? _selectedItem;
   Timer? _debounceTimer;
   String _lastQuery = '';
-  
+  bool _hasLoadedInitial = false; 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-
   @override
   void initState() {
     super.initState();
@@ -61,11 +55,9 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
     if (_selectedItem != null) {
       _controller.text = widget.itemAsString(_selectedItem!);
     }
-    
     _setupAnimations();
     _focusNode.addListener(_onFocusChanged);
   }
-
   void _setupAnimations() {
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 250),
@@ -77,7 +69,6 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
       curve: Curves.easeOutCubic,
     );
   }
-
   @override
   void dispose() {
     _controller.dispose();
@@ -87,12 +78,14 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
     _removeOverlay();
     super.dispose();
   }
-
   void _onFocusChanged() {
     if (_focusNode.hasFocus) {
       _showSuggestions();
+      if (!_hasLoadedInitial) {
+        _loadInitialData();
+      }
       final currentText = _controller.text.trim();
-      if (currentText.isNotEmpty) {
+      if (currentText.isNotEmpty && currentText != _lastQuery) {
         _searchItems(currentText, immediate: true);
       }
     } else {
@@ -103,7 +96,34 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
       });
     }
   }
-
+  Future<void> _loadInitialData() async {
+    if (_hasLoadedInitial) return;
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+    });
+    try {
+      final results = await widget.asyncItems('');
+      if (mounted) {
+        setState(() {
+          _suggestions = results.take(10).toList();
+          _isLoading = false;
+          _hasError = false;
+          _hasLoadedInitial = true;
+        });
+        _updateOverlay();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _suggestions = [];
+          _isLoading = false;
+          _hasError = true;
+        });
+        _updateOverlay();
+      }
+    }
+  }
   void _onTextChanged(String value) {
     final trimmedValue = value.trim();
     
@@ -114,29 +134,26 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
       });
       _updateOverlay();
     }
-    
     _debounceTimer?.cancel();
     
     if (trimmedValue.isNotEmpty) {
       setState(() => _isLoading = true);
-      
       _debounceTimer = Timer(const Duration(milliseconds: 300), () {
         _searchItems(trimmedValue);
       });
     } else {
       setState(() {
-        _suggestions = [];
         _isLoading = false;
         _hasError = false;
       });
-      _updateOverlay();
+      if (_hasLoadedInitial) {
+        _loadInitialData();
+      }
     }
-    
     _lastQuery = trimmedValue;
   }
-
   Future<void> _searchItems(String query, {bool immediate = false}) async {
-    if (!mounted || query.trim().isEmpty) return;
+    if (!mounted) return;
 
     if (!immediate) {
       setState(() {
@@ -144,22 +161,18 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
         _hasError = false;
       });
     }
-
     try {
-      print('🔍 بحث فوري: "$query"');
       final results = await widget.asyncItems(query);
-      
-      if (mounted && query == _controller.text.trim()) {
+      if (mounted && (query.isEmpty || query == _controller.text.trim())) {
         setState(() {
           _suggestions = results;
           _isLoading = false;
           _hasError = false;
         });
         _updateOverlay();
-        
       }
     } catch (e) {
-      if (mounted && query == _controller.text.trim()) {
+      if (mounted && (query.isEmpty || query == _controller.text.trim())) {
         setState(() {
           _suggestions = [];
           _isLoading = false;
@@ -169,7 +182,6 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
       }
     }
   }
-
   void _showSuggestions() {
     if (!_showDropdown) {
       setState(() => _showDropdown = true);
@@ -177,7 +189,6 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
       _animationController.forward();
     }
   }
-
   void _hideSuggestions() {
     if (_showDropdown) {
       _animationController.reverse().then((_) {
@@ -188,22 +199,18 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
       });
     }
   }
-
   void _createOverlay() {
     _removeOverlay();
     _overlayEntry = OverlayEntry(builder: _buildOverlay);
     Overlay.of(context).insert(_overlayEntry!);
   }
-
   void _updateOverlay() {
     _overlayEntry?.markNeedsBuild();
   }
-
   void _removeOverlay() {
     _overlayEntry?.remove();
     _overlayEntry = null;
   }
-
   void _selectItem(T item) {
     setState(() {
       _selectedItem = item;
@@ -213,27 +220,26 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
     widget.onChanged(item);
     _focusNode.unfocus();
     _hideSuggestions();
-    
-  }
-
+      }
   void _clearSelection() {
     setState(() {
       _selectedItem = null;
       _controller.clear();
       _suggestions = [];
       _lastQuery = '';
+      _hasLoadedInitial = false;
     });
     widget.onChanged(null);
     _focusNode.requestFocus();
-    
-  }
-
+      }
   Future<void> _manualRefresh() async {
+    _hasLoadedInitial = false;
     if (_controller.text.trim().isNotEmpty) {
       await _searchItems(_controller.text.trim(), immediate: true);
+    } else {
+      await _loadInitialData();
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return CompositedTransformTarget(
@@ -296,7 +302,6 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
       ),
     );
   }
-
   Widget _buildSuffixIcon() {
     if (_isLoading) {
       return Padding(
@@ -313,11 +318,10 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
         ),
       );
     }
-
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (widget.enableRefresh && _controller.text.trim().isNotEmpty)
+        if (widget.enableRefresh)
           IconButton(
             onPressed: _manualRefresh,
             icon: Icon(
@@ -326,8 +330,7 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
               size: 20,
             ),
             tooltip: 'تحديث النتائج',
-          ),
-        
+          ),        
         if (_selectedItem != null)
           IconButton(
             onPressed: _clearSelection,
@@ -350,7 +353,6 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
       ],
     );
   }
-
   Widget _buildOverlay(BuildContext context) {
     return Positioned(
       width: MediaQuery.of(context).size.width - 32,
@@ -380,7 +382,6 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
       ),
     );
   }
-
   Widget _buildContent() {
     if (_isLoading) {
       return Container(
@@ -400,7 +401,7 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
             ),
             const Gap(12),
             Text(
-              'جاري البحث...',
+              'جاري التحميل...',
               style: TextStyle(
                 color: context.colorScheme.secondary,
                 fontWeight: FontWeight.w500,
@@ -410,7 +411,6 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
         ),
       );
     }
-
     if (_hasError) {
       return Container(
         padding: const EdgeInsets.all(20),
@@ -433,7 +433,7 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
             ),
             const Gap(8),
             TextButton.icon(
-              onPressed: () => _searchItems(_controller.text.trim()),
+              onPressed: _manualRefresh,
               icon: Icon(Icons.refresh, size: 16),
               label: Text('إعادة المحاولة'),
               style: TextButton.styleFrom(
@@ -444,46 +444,11 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
         ),
       );
     }
-
     if (_suggestions.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.search_off,
-              color: context.colorScheme.secondary,
-              size: 28,
-            ),
-            const Gap(8),
-            Text(
-              widget.emptyText,
-              style: TextStyle(
-                color: context.colorScheme.secondary,
-                fontWeight: FontWeight.w500,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            if (_controller.text.trim().isNotEmpty) ...[
-              const Gap(4),
-              Text(
-                'البحث عن: "${_controller.text.trim()}"',
-                style: TextStyle(
-                  color: context.colorScheme.secondary.withOpacity(0.7),
-                  fontSize: 12,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ],
-        ),
-      );
+      return const SizedBox.shrink();
     }
-
     return _buildSuggestionsListView();
   }
-
   Widget _buildSuggestionsListView() {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(vertical: 8),
