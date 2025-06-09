@@ -32,6 +32,7 @@ import 'package:Tosell/Features/profile/screens/transaction_details_screen.dart'
 import 'package:Tosell/Features/auth/login/ForgotPassword/ForgotPasswordAuth.dart';
 import 'package:Tosell/Features/auth/login/ForgotPassword/ForgotPasswordNumber.dart';
 import 'package:Tosell/Features/auth/login/ForgotPassword/ForgotPasswordNumberNamePass.dart';
+import 'package:Tosell/Features/auth/register/screens/map_selection_screen.dart'; // ✅ إضافة import
 
 String initialLocation = AppRoutes.login;
 
@@ -69,10 +70,20 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const BackgroundWrapper(child: OrderCompleted()),
     ),
 
-    // GoRoute(
-    //   path: AppRoutes.cart,
-    //   builder: (context, state) => const CartPage(),
-    // ),
+    // ✅ إضافة route للخريطة
+    GoRoute(
+      path: AppRoutes.mapSelection,
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        return BackgroundWrapper(
+          child: MapSelectionScreen(
+            initialLatitude: extra?['latitude'],
+            initialLongitude: extra?['longitude'],
+          ),
+        );
+      },
+    ),
+
     GoRoute(
       path: AppRoutes.order,
       builder: (context, state) => const BackgroundWrapper(child: OrderScreen()),
@@ -261,6 +272,7 @@ class AppRoutes {
   static const String myProfile = '/my_profile';
   static const String editProfile = '/edit_profile';
   static const String selectLocation = '/select_location';
+  static const String mapSelection = '/map_selection'; // ✅ إضافة route الخريطة
   static const String registerScreen = '/register_screen';
   static const String addOrder = '/add_order';
   static const String login = '/login';
@@ -281,5 +293,4 @@ class AppRoutes {
   static const String ForgotpasswordnumbernamePass =
       '/ForgotPasswordNumberNamePass';
   static const String shipmentOrders = '/shipment-orders';
-
 }

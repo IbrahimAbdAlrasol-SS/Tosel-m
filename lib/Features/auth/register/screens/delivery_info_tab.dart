@@ -8,12 +8,16 @@ import 'package:Tosell/core/widgets/CustomTextFormField.dart';
 import 'package:Tosell/Features/auth/register/models/registration_zone.dart';
 import 'package:Tosell/Features/auth/register/services/registration_zone_service.dart';
 import 'package:Tosell/core/widgets/custom_search_drop_down.dart';
+import 'package:go_router/go_router.dart'; // ✅ إضافة import
+import 'package:Tosell/core/router/app_router.dart'; // ✅ إضافة import
+
 class DeliveryInfoTab extends StatefulWidget {
   const DeliveryInfoTab({super.key});
 
   @override
   State<DeliveryInfoTab> createState() => _DeliveryInfoTabState();
 }
+
 class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
   Set<int> expandedTiles = {};
   List<DeliveryLocation> deliveryLocations = [DeliveryLocation()];
@@ -43,13 +47,12 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
 
             const SizedBox(height: 12),
             _buildAddLocationButton(),
-            
-            
           ],
         ),
       ),
     );
   }
+
   Widget _buildLocationCard(int index, ThemeData theme) {
     bool isExpanded = expandedTiles.contains(index);
 
@@ -123,7 +126,7 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
                     const Gap(AppSpaces.medium),
                     _buildNearestPointField(index),
                     const Gap(AppSpaces.medium),
-                    _buildLocationPicker(),
+                    _buildLocationPicker(index), // ✅ تمرير index
                     const Gap(AppSpaces.medium),
                     _buildDailyOrderRateDropdown(index),
                     const Gap(AppSpaces.small),
@@ -136,6 +139,7 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
       ),
     );
   }
+
   Widget _buildGovernorateDropdown(int index) {
     return RegistrationSearchDropDown<RegistrationGovernorate>(
       label: "المحافظة",
@@ -153,17 +157,16 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
         _lastGovernorateQuery[index] = query;
         
         return await _zoneService.getGovernorates(
-          query: query.isEmpty ? null : query, //    أول 10
+          query: query.isEmpty ? null : query,
           forceRefresh: shouldForceRefresh,
         );
       },
       onChanged: (governorate) {
         setState(() {
           deliveryLocations[index].selectedGovernorate = governorate;
-          deliveryLocations[index].selectedZone = null; // إعادة تعيين 
-          _lastZoneQuery[index] = null; // مسح آخر بحث 
+          deliveryLocations[index].selectedZone = null;
+          _lastZoneQuery[index] = null;
         });
-        
       },
       itemBuilder: (context, governorate) => Row(
         children: [
@@ -185,11 +188,12 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
           ),
         ],
       ),
-      emptyText: "", // في حال احتاجيتوا تكتبون شي في حال ماكو محافظة أو المنطقة
+      emptyText: "",
       errorText: "خطأ في تحميل المحافظات",
       enableRefresh: true,
     );
   }
+
   Widget _buildZoneDropdown(int index) {
     final selectedGov = deliveryLocations[index].selectedGovernorate;
     return RegistrationSearchDropDown<RegistrationZone>(
@@ -212,7 +216,7 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
         
         return await _zoneService.getZonesByGovernorate(
           governorateId: selectedGov!.id!,
-          query: query.isEmpty ? null : query, //    أول 10
+          query: query.isEmpty ? null : query,
           forceRefresh: shouldForceRefresh,
         );
       },
@@ -278,7 +282,11 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
     );
   }
 
-  Widget _buildLocationPicker() {
+  // ✅ تحديث دالة بناء منتقي الموقع
+  Widget _buildLocationPicker(int index) {
+    final location = deliveryLocations[index];
+    final hasLocation = location.latitude != null && location.longitude != null;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -291,14 +299,16 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
         ),
         const Gap(AppSpaces.small),
         InkWell(
-          onTap: _openLocationPicker,
+          onTap: () => _openLocationPicker(index), // ✅ تمرير index
           borderRadius: BorderRadius.circular(16),
           child: Container(
             height: 120,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: context.colorScheme.outline.withOpacity(0.3),
+                color: hasLocation 
+                    ? context.colorScheme.primary.withOpacity(0.5)
+                    : context.colorScheme.outline.withOpacity(0.3),
               ),
             ),
             child: ClipRRect(
@@ -314,25 +324,38 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
                   ),
                   Positioned.fill(
                     child: Container(
-                      color: Colors.black.withOpacity(0.5),
+                      color: Colors.black.withOpacity(hasLocation ? 0.3 : 0.5),
                       child: Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             SvgPicture.asset(
                               'assets/svg/MapPinLine.svg',
-                              color: context.colorScheme.primary,
+                              color: hasLocation 
+                                  ? context.colorScheme.primary
+                                  : Colors.white,
                               height: 24,
                             ),
                             const Gap(8),
                             Text(
-                              'تحديد الموقع',
+                              hasLocation ? 'تم تحديد الموقع' : 'تحديد الموقع',
                               style: context.textTheme.bodyMedium?.copyWith(
                                 fontSize: 16,
-                                color: context.colorScheme.primary,
+                                color: hasLocation 
+                                    ? context.colorScheme.primary
+                                    : Colors.white,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
+                            if (hasLocation) ...[
+                              const Gap(4),
+                              Text(
+                                'اضغط للتعديل',
+                                style: context.textTheme.bodySmall?.copyWith(
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -343,9 +366,44 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
             ),
           ),
         ),
+        
+        // ✅ عرض الإحداثيات إذا تم تحديد الموقع
+        if (hasLocation) ...[
+          const Gap(AppSpaces.small),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: context.colorScheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: context.colorScheme.primary.withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.location_on,
+                  color: context.colorScheme.primary,
+                  size: 16,
+                ),
+                const Gap(8),
+                Expanded(
+                  child: Text(
+                    'خط الطول: ${location.longitude?.toStringAsFixed(4)} | خط العرض: ${location.latitude?.toStringAsFixed(4)}',
+                    style: context.textTheme.bodySmall?.copyWith(
+                      color: context.colorScheme.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
+
   Widget _buildDailyOrderRateDropdown(int index) {
     return CustomTextFormField<int>(
       label: "معدل الطلبات اليومي المتوقع",
@@ -420,6 +478,7 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
       ),
     );
   }
+
   void _removeLocation(int index) {
     setState(() {
       deliveryLocations.removeAt(index);
@@ -454,11 +513,10 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
       _lastGovernorateQuery = newGovernorateQuery;
       _lastZoneQuery = newZoneQuery;
     });
-      }
+  }
 
   Future<void> _refreshAllData() async { 
     try {
-      // مسح كل الـ cache
       _zoneService.clearCache();
       _lastGovernorateQuery.clear();
       _lastZoneQuery.clear();
@@ -503,28 +561,77 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
     }
   }
   
-  void _openLocationPicker() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'سيتم فتح  الموقع',
-          style: TextStyle(fontFamily: "Tajawal"),
+  // ✅ تحديث دالة فتح منتقي الموقع
+  Future<void> _openLocationPicker(int index) async {
+    final location = deliveryLocations[index];
+    
+    try {
+      final result = await context.push(
+        AppRoutes.mapSelection,
+        extra: {
+          'latitude': location.latitude,
+          'longitude': location.longitude,
+        },
+      );
+
+      if (result != null && result is Map<String, dynamic>) {
+        setState(() {
+          deliveryLocations[index].latitude = result['latitude'];
+          deliveryLocations[index].longitude = result['longitude'];
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                const Gap(8),
+                Text(
+                  'تم تحديد الموقع بنجاح',
+                  style: TextStyle(fontFamily: "Tajawal"),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error, color: Colors.white),
+              const Gap(8),
+              Text(
+                'حدث خطأ في فتح الخريطة',
+                style: TextStyle(fontFamily: "Tajawal"),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
         ),
-        duration: Duration(seconds:1),
-      ),
-    );
+      );
+    }
   }
+
   List<Map<String, dynamic>> getDeliveryData() {
     return deliveryLocations.map((location) => location.toJson()).toList();
   }
+
   bool validateData() {
     for (int i = 0; i < deliveryLocations.length; i++) {
       final location = deliveryLocations[i];
-      if (location.selectedGovernorate == null || location.selectedZone == null) {
+      if (location.selectedGovernorate == null || 
+          location.selectedZone == null ||
+          location.latitude == null ||
+          location.longitude == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'يرجى إكمال بيانات الموقع ${i + 1}',
+              'يرجى إكمال بيانات الموقع ${i + 1} (المحافظة، المنطقة، والموقع على الخريطة)',
               style: TextStyle(fontFamily: "Tajawal"),
             ),
             backgroundColor: Colors.red,
@@ -536,24 +643,30 @@ class _DeliveryInfoTabState extends State<DeliveryInfoTab> {
     return true;
   }
 }
+
 class DeliveryLocation {
   RegistrationGovernorate? selectedGovernorate;
   RegistrationZone? selectedZone;
   String? nearestPoint;
   int dailyOrderRate;
+  double? latitude;  // ✅ إضافة latitude
+  double? longitude; // ✅ إضافة longitude
   
   DeliveryLocation({
     this.selectedGovernorate,
     this.selectedZone,
     this.nearestPoint,
     this.dailyOrderRate = 0,
+    this.latitude,    // ✅ إضافة في constructor
+    this.longitude,   // ✅ إضافة في constructor
   });
+
   Map<String, dynamic> toJson() {
     return {
-      'governorate': selectedGovernorate?.toJson(),
-      'zone': selectedZone?.toJson(),
-      'nearestPoint': nearestPoint,
-      'dailyOrderRate': dailyOrderRate,
+      'zoneId': selectedZone?.id,              
+      'nearestLandmark': nearestPoint,         
+      'lat': latitude,                         
+      'long': longitude,                       
     };
   }
 }

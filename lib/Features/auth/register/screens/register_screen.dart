@@ -9,15 +9,19 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:Tosell/Features/auth/register/screens/user_info_tab.dart';
 import 'package:Tosell/Features/auth/register/widgets/build_background.dart';
 import 'package:Tosell/Features/auth/register/screens/delivery_info_tab.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:Tosell/Features/auth/register/providers/registration_provider.dart';
+import 'package:Tosell/Features/auth/register/models/registration_zone.dart';
+import 'package:Tosell/core/utils/GlobalToast.dart';
 
-class RegisterScreen extends StatefulWidget {
+class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen>
+class _RegisterScreenState extends ConsumerState<RegisterScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _currentIndex = 0;
@@ -42,8 +46,52 @@ class _RegisterScreenState extends State<RegisterScreen>
     super.dispose();
   }
 
+  // ✅ دالة للانتقال إلى التاب التالي
+  void _goToNextTab() {
+    if (_currentIndex < _tabController.length - 1) {
+      _tabController.animateTo(_currentIndex + 1);
+    }
+  }
+
+  // ✅ دالة لإرسال النموذج النهائي
+  Future<void> _submitRegistration() async {
+    final registrationNotifier = ref.read(registrationNotifierProvider.notifier);
+    
+    // التحقق من صحة البيانات
+    if (!registrationNotifier.validateUserInfo() || !registrationNotifier.validateZones()) {
+      final error = ref.read(registrationNotifierProvider).error;
+      if (error != null) {
+        GlobalToast.show(
+          message: error,
+          backgroundColor: Colors.red,
+        );
+      }
+      return;
+    }
+
+    // إرسال التسجيل
+    final success = await registrationNotifier.submitRegistration();
+    
+    if (success) {
+      GlobalToast.showSuccess(message: 'تم التسجيل بنجاح! مرحباً بك في توصيل');
+      
+      // الانتقال إلى الصفحة الرئيسية
+      if (mounted) {
+        context.go(AppRoutes.home);
+      }
+    } else {
+      final error = ref.read(registrationNotifierProvider).error;
+      GlobalToast.show(
+        message: error ?? 'فشل في التسجيل',
+        backgroundColor: Colors.red,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final registrationState = ref.watch(registrationNotifierProvider);
+    
     return Scaffold(
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
@@ -51,6 +99,29 @@ class _RegisterScreenState extends State<RegisterScreen>
           children: [
             _buildBackgroundSection(),
             _buildBottomSheetSection(),
+            
+            // ✅ مؤشر التحميل العام
+            if (registrationState.isSubmitting)
+              Container(
+                color: Colors.black.withOpacity(0.5),
+                child: const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(color: Colors.white),
+                      Gap(16),
+                      Text(
+                        'جاري إنشاء الحساب...',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -66,16 +137,18 @@ class _RegisterScreenState extends State<RegisterScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Gap(25),
-                 CustomAppBar(
-                          // title: "إنشاء حساب",
-                          titleWidget: Text('تسجيل دخول', style: context.textTheme.bodyMedium!.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                            fontSize: 16
-                          ),) ,
-                          showBackButton: true,
-                          onBackButtonPressed: () =>context.push(AppRoutes.login),
-                        ),
+                CustomAppBar(
+                  titleWidget: Text(
+                    'تسجيل دخول', 
+                    style: context.textTheme.bodyMedium!.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      fontSize: 16
+                    ),
+                  ),
+                  showBackButton: true,
+                  onBackButtonPressed: () => context.push(AppRoutes.login),
+                ),
                 _buildLogo(),
                 const Gap(10),
                 _buildTitle(),
@@ -141,7 +214,6 @@ class _RegisterScreenState extends State<RegisterScreen>
           ),
           child: SingleChildScrollView(
             controller: scrollController,
-            // physics: const NeverScrollableScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -167,6 +239,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         dividerColor: Colors.transparent,
         tabs: List.generate(2, (i) {
           final bool isSelected = _currentIndex == i;
+          final bool isCompleted = _currentIndex > i;
           final String label = i == 0 ? "معلومات الحساب" : "معلومات التوصيل";
 
           return Tab(
@@ -179,7 +252,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                   decoration: BoxDecoration(
                     color: isSelected
                         ? Theme.of(context).colorScheme.primary
-                        : _currentIndex == 1 ? const Color(0xff8CD98C) :   const Color(0xffE1E7EA),
+                        : isCompleted 
+                            ? const Color(0xff8CD98C) 
+                            : const Color(0xffE1E7EA),
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),
@@ -189,9 +264,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                   style: TextStyle(
                     color: isSelected
                         ? Theme.of(context).colorScheme.primary
-                        : _currentIndex == 1 ? const Color(0xff8CD98C) :  Theme.of(context).colorScheme.secondary,
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.normal,
+                        : isCompleted 
+                            ? const Color(0xff8CD98C) 
+                            : Theme.of(context).colorScheme.secondary,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
               ],
@@ -207,9 +283,64 @@ class _RegisterScreenState extends State<RegisterScreen>
       height: MediaQuery.of(context).size.height * 0.7,
       child: TabBarView(
         controller: _tabController,
-        children: const [
-          UserInfoTab(),
-          DeliveryInfoTab(),
+        physics: const NeverScrollableScrollPhysics(), // ✅ منع السحب للتنقل
+        children: [
+          // ✅ تمرير callback للانتقال للتاب التالي
+          UserInfoTab(onNext: _goToNextTab),
+          
+          // ✅ التاب الثاني مع أزرار التحكم
+          Column(
+            children: [
+              // محتوى التوصيل
+              Expanded(child: DeliveryInfoTab()),
+              
+              // أزرار التحكم
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                    top: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => _tabController.animateTo(0),
+                        child: const Text('السابق'),
+                      ),
+                    ),
+                    const Gap(16),
+                    Expanded(
+                      flex: 2,
+                      child: Consumer(
+                        builder: (context, ref, child) {
+                          final isSubmitting = ref.watch(
+                            registrationNotifierProvider.select((s) => s.isSubmitting)
+                          );
+                          
+                          return FilledButton(
+                            onPressed: isSubmitting ? null : _submitRegistration,
+                            child: isSubmitting
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text('إنشاء الحساب'),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
