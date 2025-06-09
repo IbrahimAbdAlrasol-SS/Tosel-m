@@ -348,4 +348,27 @@ class RegistrationNotifier extends _$RegistrationNotifier {
   void reset() {
     state = const RegistrationState();
   }
+  void addNewZone() {
+    final newZones = List<RegistrationZoneInfo>.from(state.zones)
+      ..add(RegistrationZoneInfo());
+    state = state.copyWith(zones: newZones);
+  }
+
+  /// تحديث معلومات منطقة
+  void updateZoneInfo(int index, RegistrationZoneInfo zoneInfo) {
+    if (index >= state.zones.length) return;
+
+    final newZones = List<RegistrationZoneInfo>.from(state.zones);
+    newZones[index] = zoneInfo;
+    state = state.copyWith(zones: newZones, error: null);
+  }
+
+  /// حذف منطقة
+  void deleteZone(int index) {
+    if (index >= state.zones.length || state.zones.length <= 1) return;
+
+    final newZones = List<RegistrationZoneInfo>.from(state.zones)
+      ..removeAt(index);
+    state = state.copyWith(zones: newZones);
+  }
 }

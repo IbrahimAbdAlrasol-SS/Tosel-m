@@ -60,13 +60,15 @@ dependencies:
   flutter_riverpod: ^2.6.1
   riverpod_annotation: ^2.6.1
   dropdown_search: ^5.0.6
+  flutter_map: ^8.1.1
+  latlong2: ^0.9.1
+  http: ^1.4.0
 
 
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  http: ^1.0.0
   json_serializable: ^6.7.0
   build_runner: ^2.4.15
   

@@ -3,7 +3,6 @@ import 'package:Tosell/core/router/app_router.dart';
 import 'package:Tosell/core/widgets/CustomTextFormField.dart';
 import 'package:Tosell/core/widgets/FillButton.dart';
 import 'package:flutter/material.dart';
-import 'package:Tosell/core/constants/spaces.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
@@ -23,7 +22,6 @@ class UserInfoTab extends ConsumerStatefulWidget {
 class _UserInfoTabState extends ConsumerState<UserInfoTab> {
   final _formKey = GlobalKey<FormState>();
   
-  // Controllers
   final _fullNameController = TextEditingController();
   final _brandNameController = TextEditingController();
   final _userNameController = TextEditingController();
@@ -31,7 +29,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  // Focus nodes
   final _fullNameFocus = FocusNode();
   final _brandNameFocus = FocusNode();
   final _userNameFocus = FocusNode();
@@ -75,10 +72,8 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
   }
 
   Future<void> _pickImage() async {
-    final ImagePicker picker = ImagePicker();
-    
     try {
-      final XFile? image = await picker.pickImage(
+      final XFile? image = await ImagePicker().pickImage(
         source: ImageSource.gallery,
         maxWidth: 1024,
         maxHeight: 1024,
@@ -118,9 +113,7 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
   Future<void> _handleNext() async {
     _saveCurrentData();
 
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     final isValid = ref
         .read(registrationNotifierProvider.notifier)
@@ -129,10 +122,7 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
     if (!isValid) {
       final error = ref.read(registrationNotifierProvider).error;
       if (error != null) {
-        GlobalToast.show(
-          message: error,
-          backgroundColor: Colors.red,
-        );
+        GlobalToast.show(message: error, backgroundColor: Colors.red);
       }
       return;
     }
@@ -160,17 +150,16 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
   Widget build(BuildContext context) {
     final state = ref.watch(registrationNotifierProvider);
     
-    return Expanded( // ✅ إضافة Expanded
+    return Expanded(
       child: Padding(
-        padding: AppSpaces.allMedium,
+        padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
-              // ✅ جعل الحقول في Expanded مع ListView
               Expanded(
                 child: ListView(
-                  physics: const BouncingScrollPhysics(), // ✅ أفضل من NeverScrollableScrollPhysics
+                  physics: const BouncingScrollPhysics(),
                   children: [
                     CustomTextFormField(
                       controller: _fullNameController,
@@ -187,26 +176,21 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
                         ),
                       ),
                       validator: (value) {
-                        if (value?.trim().isEmpty ?? true) {
-                          return "اسم صاحب المتجر مطلوب";
-                        }
-                        if (value!.trim().length < 2) {
-                          return "اسم صاحب المتجر قصير جداً";
-                        }
+                        if (value?.trim().isEmpty ?? true) return "اسم صاحب المتجر مطلوب";
+                        if (value!.trim().length < 2) return "اسم صاحب المتجر قصير جداً";
                         return null;
                       },
                       onChanged: (value) => _saveCurrentData(),
                       onFieldSubmitted: (_) => _brandNameFocus.requestFocus(),
                     ),
                     
-                    const Gap(AppSpaces.medium),
+                    const Gap(5),
                     
                     CustomTextFormField(
                       controller: _brandNameController,
                       focusNode: _brandNameFocus,
                       label: "اسم المتجر",
                       hint: "مثال: \"معرض الأخوين\"",
-                      keyboardType: TextInputType.text,
                       prefixInner: Padding(
                         padding: const EdgeInsets.all(10.0),
                         child: SvgPicture.asset(
@@ -215,26 +199,21 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
                         ),
                       ),
                       validator: (value) {
-                        if (value?.trim().isEmpty ?? true) {
-                          return "اسم المتجر مطلوب";
-                        }
-                        if (value!.trim().length < 2) {
-                          return "اسم المتجر قصير جداً";
-                        }
+                        if (value?.trim().isEmpty ?? true) return "اسم المتجر مطلوب";
+                        if (value!.trim().length < 2) return "اسم المتجر قصير جداً";
                         return null;
                       },
                       onChanged: (value) => _saveCurrentData(),
                       onFieldSubmitted: (_) => _userNameFocus.requestFocus(),
                     ),
                     
-                    const Gap(AppSpaces.medium),
+                    const Gap(5),
                     
                     CustomTextFormField(
                       controller: _userNameController,
                       focusNode: _userNameFocus,
                       label: "اسم المستخدم",
                       hint: "مثال: \"ahmad_store\"",
-                      keyboardType: TextInputType.text,
                       prefixInner: Padding(
                         padding: const EdgeInsets.all(10.0),
                         child: SvgPicture.asset(
@@ -243,23 +222,17 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
                         ),
                       ),
                       validator: (value) {
-                        if (value?.trim().isEmpty ?? true) {
-                          return "اسم المستخدم مطلوب";
-                        }
-                        if (value!.trim().length < 3) {
-                          return "اسم المستخدم قصير جداً";
-                        }
+                        if (value?.trim().isEmpty ?? true) return "اسم المستخدم مطلوب";
+                        if (value!.trim().length < 3) return "اسم المستخدم قصير جداً";
                         final hasLetters = RegExp(r'[a-zA-Z\u0600-\u06FF]').hasMatch(value);
-                        if (!hasLetters) {
-                          return "اسم المستخدم يجب أن يحتوي على أحرف";
-                        }
+                        if (!hasLetters) return "اسم المستخدم يجب أن يحتوي على أحرف";
                         return null;
                       },
                       onChanged: (value) => _saveCurrentData(),
                       onFieldSubmitted: (_) => _phoneFocus.requestFocus(),
                     ),
                     
-                    const Gap(AppSpaces.medium),
+                    const Gap(5),
                     
                     CustomTextFormField(
                       controller: _phoneController,
@@ -275,10 +248,7 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
                         ),
                       ),
                       validator: (value) {
-                        if (value?.trim().isEmpty ?? true) {
-                          return "رقم الهاتف مطلوب";
-                        }
-                        
+                        if (value?.trim().isEmpty ?? true) return "رقم الهاتف مطلوب";
                         final phoneRegex = RegExp(r'^(07[0-9]{9}|07[0-9]{8})$');
                         if (!phoneRegex.hasMatch(value!.replaceAll(' ', ''))) {
                           return "رقم الهاتف غير صحيح";
@@ -289,16 +259,14 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
                       onFieldSubmitted: (_) => _passwordFocus.requestFocus(),
                     ),
                     
-                    const Gap(AppSpaces.medium),
+                    const Gap(5),
                     
                     CustomTextFormField(
                       readOnly: true,
                       label: "شعار / صورة المتجر",
                       hint: state.brandImage?.name ?? "أضغط هنا",
                       validator: (value) {
-                        if (state.brandImage == null) {
-                          return "صورة المتجر مطلوبة";
-                        }
+                        if (state.brandImage == null) return "صورة المتجر مطلوبة";
                         return null;
                       },
                       suffixInner: GestureDetector(
@@ -338,7 +306,7 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
                       ),
                     ),
                     
-                    const Gap(AppSpaces.medium),
+                    const Gap(5),
                     
                     CustomTextFormField(
                       controller: _passwordController,
@@ -365,19 +333,15 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
                         ),
                       ),
                       validator: (value) {
-                        if (value?.isEmpty ?? true) {
-                          return "كلمة المرور مطلوبة";
-                        }
-                        if (value!.length < 6) {
-                          return "كلمة المرور قصيرة جداً (6 أحرف على الأقل)";
-                        }
+                        if (value?.isEmpty ?? true) return "كلمة المرور مطلوبة";
+                        if (value!.length < 6) return "كلمة المرور قصيرة جداً (6 أحرف على الأقل)";
                         return null;
                       },
                       onChanged: (value) => _saveCurrentData(),
                       onFieldSubmitted: (_) => _confirmPasswordFocus.requestFocus(),
                     ),
                     
-                    const Gap(AppSpaces.medium),
+                    const Gap(5),
                     
                     CustomTextFormField(
                       controller: _confirmPasswordController,
@@ -404,29 +368,23 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
                         ),
                       ),
                       validator: (value) {
-                        if (value?.isEmpty ?? true) {
-                          return "تأكيد كلمة المرور مطلوب";
-                        }
-                        if (value != _passwordController.text) {
-                          return "كلمة المرور غير متطابقة";
-                        }
+                        if (value?.isEmpty ?? true) return "تأكيد كلمة المرور مطلوب";
+                        if (value != _passwordController.text) return "كلمة المرور غير متطابقة";
                         return null;
                       },
                       onChanged: (value) => _saveCurrentData(),
                       onFieldSubmitted: (_) => _handleNext(),
                     ),
                     
-                    const Gap(50), // ✅ مساحة إضافية في الأسفل
+                    const Gap(50),
                   ],
                 ),
               ),
               
-              // ✅ الأزرار في Container منفصل في الأسفل
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Column(
                   children: [
-                    // زر التالي
                     Align(
                       alignment: Alignment.centerLeft,
                       child: FillButton(
@@ -440,7 +398,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
                     
                     const Gap(20),
                     
-                    // رابط تسجيل الدخول
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -450,7 +407,7 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
                             color: Theme.of(context).colorScheme.secondary,
                           ),
                         ),
-                        const Gap(AppSpaces.exSmall),
+                        const Gap(5),
                         GestureDetector(
                           onTap: () => context.go(AppRoutes.login),
                           child: Text(

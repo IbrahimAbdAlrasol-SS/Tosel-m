@@ -46,18 +46,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     super.dispose();
   }
 
-  // ✅ دالة للانتقال إلى التاب التالي
   void _goToNextTab() {
     if (_currentIndex < _tabController.length - 1) {
       _tabController.animateTo(_currentIndex + 1);
     }
   }
 
-  // ✅ دالة لإرسال النموذج النهائي
   Future<void> _submitRegistration() async {
     final registrationNotifier = ref.read(registrationNotifierProvider.notifier);
     
-    // التحقق من صحة البيانات
     if (!registrationNotifier.validateUserInfo() || !registrationNotifier.validateZones()) {
       final error = ref.read(registrationNotifierProvider).error;
       if (error != null) {
@@ -69,13 +66,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
       return;
     }
 
-    // إرسال التسجيل
     final success = await registrationNotifier.submitRegistration();
     
     if (success) {
       GlobalToast.showSuccess(message: 'تم التسجيل بنجاح! مرحباً بك في توصيل');
       
-      // الانتقال إلى الصفحة الرئيسية
       if (mounted) {
         context.go(AppRoutes.home);
       }
@@ -100,7 +95,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
             _buildBackgroundSection(),
             _buildBottomSheetSection(),
             
-            // ✅ مؤشر التحميل العام
             if (registrationState.isSubmitting)
               Container(
                 color: Colors.black.withOpacity(0.5),
