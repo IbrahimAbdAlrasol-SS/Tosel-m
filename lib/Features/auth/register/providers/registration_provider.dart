@@ -396,3 +396,7 @@
 //     state = state.copyWith(zones: newZones);
 //   }
 // }
+
+// إضافة هذه الدالة إلى RegistrationNotifier
+
+

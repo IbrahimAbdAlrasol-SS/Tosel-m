@@ -1,3 +1,4 @@
+import 'package:Tosell/Features/auth/login/providers/auth_provider.dart';
 import 'package:Tosell/Features/auth/register/providers/registration_provider.dart';
 import 'package:Tosell/core/router/app_router.dart';
 import 'package:Tosell/core/widgets/CustomTextFormField.dart';
@@ -43,8 +44,8 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final state = ref.read(registrationNotifierProvider);
-      _fullNameController.text = state.fullName ?? '';
+      final state = ref.read(authNotifierProvider);
+      _fullNameController.text = state.value?.fullName ?? '';
       _brandNameController.text = state.brandName ?? '';
       _userNameController.text = state.userName ?? '';
       _phoneController.text = state.phoneNumber ?? '';
@@ -80,17 +81,7 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
         imageQuality: 80,
       );
 
-      if (image != null) {
-        ref.read(registrationNotifierProvider.notifier).setBrandImage(image);
-        
-        final success = await ref
-            .read(registrationNotifierProvider.notifier)
-            .uploadBrandImage();
-            
-        if (success) {
-          GlobalToast.showSuccess(message: 'تم رفع الصورة بنجاح');
-        }
-      }
+      
     } catch (e) {
       GlobalToast.show(
         message: 'فشل في اختيار الصورة',
@@ -99,52 +90,9 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
     }
   }
 
-  void _saveCurrentData() {
-    ref.read(registrationNotifierProvider.notifier).updateUserInfo(
-          fullName: _fullNameController.text.trim(),
-          brandName: _brandNameController.text.trim(),
-          userName: _userNameController.text.trim(),
-          phoneNumber: _phoneController.text.trim(),
-          password: _passwordController.text,
-          confirmPassword: _confirmPasswordController.text,
-        );
-  }
 
-  Future<void> _handleNext() async {
-    _saveCurrentData();
 
-    if (!_formKey.currentState!.validate()) return;
-
-    final isValid = ref
-        .read(registrationNotifierProvider.notifier)
-        .validateUserInfo();
-
-    if (!isValid) {
-      final error = ref.read(registrationNotifierProvider).error;
-      if (error != null) {
-        GlobalToast.show(message: error, backgroundColor: Colors.red);
-      }
-      return;
-    }
-
-    final state = ref.read(registrationNotifierProvider);
-    if (state.brandImage != null && state.uploadedImageUrl == null) {
-      final success = await ref
-          .read(registrationNotifierProvider.notifier)
-          .uploadBrandImage();
-          
-      if (!success) {
-        final error = ref.read(registrationNotifierProvider).error;
-        GlobalToast.show(
-          message: error ?? 'فشل في رفع الصورة',
-          backgroundColor: Colors.red,
-        );
-        return;
-      }
-    }
-
-    widget.onNext?.call();
-  }
+  
 
   @override
   Widget build(BuildContext context) {

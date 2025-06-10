@@ -3,6 +3,7 @@ import 'package:Tosell/Features/auth/Services/Auth_service.dart';
 import 'package:Tosell/Features/auth/models/User.dart';
 import 'package:Tosell/Features/profile/models/zone.dart';
 import 'package:Tosell/core/helpers/SharedPreferencesHelper.dart';
+import 'package:Tosell/core/Client/BaseClient.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'auth_provider.g.dart';
@@ -10,8 +11,11 @@ part 'auth_provider.g.dart';
 @riverpod
 class authNotifier extends _$authNotifier {
   final AuthService _service = AuthService();
+  final BaseClient _baseClient = BaseClient();
 
-  // ✅ تحديث دالة register لتتطابق مع API المطلوب
+  // ✅ دالة رفع الصورة
+ 
+  // ✅ دالة التسجيل الرئيسية مع zones كاملة
   Future<(User? data, String? error)> register({
     required String fullName,
     required String brandName,
@@ -19,15 +23,15 @@ class authNotifier extends _$authNotifier {
     required String phoneNumber,
     required String password,
     required String brandImg,
-    required List<Zone> zones, // List<Zone> بدلاً من Map
+    required List<Zone> zones,
     double? latitude,
     double? longitude,
     String? nearestLandmark,
   }) async {
     try {
       state = const AsyncValue.loading();
-      
-      print('🔍 AuthProvider: تحضير بيانات التسجيل');
+
+      print('🚀 AuthProvider: بدء عملية التسجيل');
       print('📝 الاسم الكامل: $fullName');
       print('🏪 اسم المتجر: $brandName');
       print('👤 اسم المستخدم: $userName');
@@ -41,17 +45,18 @@ class authNotifier extends _$authNotifier {
           'zoneId': zone.id,
           'nearestLandmark': nearestLandmark ?? 'نقطة مرجعية',
           'long': longitude ?? 44.3661, // قيمة افتراضية (بغداد)
-          'lat': latitude ?? 33.3152,   // قيمة افتراضية (بغداد)
+          'lat': latitude ?? 33.3152, // قيمة افتراضية (بغداد)
         };
       }).toList();
 
       print('📍 بيانات المناطق المرسلة: $zonesData');
 
-      // ✅ تحديد نوع المنطقة (أول منطقة)
+   
       final firstZoneType = zones.isNotEmpty ? (zones.first.type ?? 1) : 1;
       print('🏷️ نوع المنطقة: $firstZoneType');
 
       final (user, error) = await _service.register(
+          user: User(
         fullName: fullName,
         brandName: brandName,
         userName: userName,
@@ -60,7 +65,7 @@ class authNotifier extends _$authNotifier {
         brandImg: brandImg,
         zones: zonesData,
         type: firstZoneType,
-      );
+      ));
 
       if (user == null) {
         state = const AsyncValue.data(null);
@@ -79,33 +84,26 @@ class authNotifier extends _$authNotifier {
     }
   }
 
-  // ✅ دالة مبسطة للتسجيل (للاستخدام مع المناطق البسيطة)
-  Future<(User? data, String? error)> registerSimple({
-    required String fullName,
-    required String brandName,
-    required String userName,
-    required String phoneNumber,
-    required String password,
-    required String brandImg,
-    required List<Map<String, dynamic>> zones,
-    required int type,
+
+
+  // ✅ دالة تسجيل الدخول (بدون تغيير)
+  Future<(User? data, String? error)> login({
+    String? phonNumber,
+    required String passWord,
   }) async {
     try {
       state = const AsyncValue.loading();
 
-      final (user, error) = await _service.register(
-        fullName: fullName,
-        brandName: brandName,
-        userName: userName,
-        phoneNumber: phoneNumber,
-        password: password,
-        brandImg: brandImg,
-        zones: zones,
-        type: type,
+      print('🔐 AuthProvider: محاولة تسجيل الدخول للرقم: $phonNumber');
+
+      final (user, error) = await _service.login(
+        phoneNumber: phonNumber,
+        password: passWord,
       );
 
       if (user == null) {
         state = const AsyncValue.data(null);
+        print('❌ AuthProvider: فشل تسجيل الدخول - $error');
         return (null, error);
       }
 
@@ -113,36 +111,47 @@ class authNotifier extends _$authNotifier {
       state = AsyncValue.data(user);
       return (user, null);
     } catch (e, stackTrace) {
+      print('💥 AuthProvider login Exception: $e');
       state = AsyncValue.error(e, stackTrace);
       return (null, e.toString());
     }
   }
+  
 
-  Future<(User? data, String? error)> login({
-    String? phonNumber,
-    required String passWord,
-  }) async {
+  Future<void> logout() async {
     try {
-      state = const AsyncValue.loading();
-      final (user, error) = await _service.login(
-        phoneNumber: phonNumber,
-        password: passWord,
-      );
-      if (user == null) {
-        state = const AsyncValue.data(null);
-        return (null, error);
+      print('🚪 AuthProvider: تسجيل الخروج');
+      await SharedPreferencesHelper.removeUser();
+      state = const AsyncValue.data(null);
+    } catch (e) {
+      print('💥 AuthProvider logout Exception: $e');
+    }
+  }
+
+  Future<User?> getCurrentUser() async {
+    try {
+      final user = await SharedPreferencesHelper.getUser();
+      if (user != null) {
+        state = AsyncValue.data(user);
       }
-      await SharedPreferencesHelper.saveUser(user);
+      return user;
+    } catch (e) {
+      print('💥 AuthProvider getCurrentUser Exception: $e');
+      return null;
+    }
+  }
+
+  void updateUserState(User? user) {
+    if (user != null) {
       state = AsyncValue.data(user);
-      return (user, error);
-    } catch (e, stackTrace) {
-      state = AsyncValue.error(e, stackTrace);
-      return (null, e.toString());
+    } else {
+      state = const AsyncValue.data(null);
     }
   }
 
   @override
   FutureOr<void> build() async {
+    await getCurrentUser();
     return;
   }
 }
