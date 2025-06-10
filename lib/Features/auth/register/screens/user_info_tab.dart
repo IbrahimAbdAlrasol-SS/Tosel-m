@@ -150,281 +150,274 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
   Widget build(BuildContext context) {
     final state = ref.watch(registrationNotifierProvider);
     
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              Expanded(
-                child: ListView(
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    CustomTextFormField(
-                      controller: _fullNameController,
-                      focusNode: _fullNameFocus,
-                      label: "أسم صاحب المتجر",
-                      hint: "مثال: \"محمد حسين\"",
-                      prefixInner: Padding(
-                        padding: const EdgeInsets.all(10.0),
-                        child: SvgPicture.asset(
-                          "assets/svg/User.svg",
-                          width: 24,
-                          height: 24,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value?.trim().isEmpty ?? true) return "اسم صاحب المتجر مطلوب";
-                        if (value!.trim().length < 2) return "اسم صاحب المتجر قصير جداً";
-                        return null;
-                      },
-                      onChanged: (value) => _saveCurrentData(),
-                      onFieldSubmitted: (_) => _brandNameFocus.requestFocus(),
-                    ),
-                    
-                    const Gap(5),
-                    
-                    CustomTextFormField(
-                      controller: _brandNameController,
-                      focusNode: _brandNameFocus,
-                      label: "اسم المتجر",
-                      hint: "مثال: \"معرض الأخوين\"",
-                      prefixInner: Padding(
-                        padding: const EdgeInsets.all(10.0),
-                        child: SvgPicture.asset(
-                          "assets/svg/12. Storefront.svg",
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value?.trim().isEmpty ?? true) return "اسم المتجر مطلوب";
-                        if (value!.trim().length < 2) return "اسم المتجر قصير جداً";
-                        return null;
-                      },
-                      onChanged: (value) => _saveCurrentData(),
-                      onFieldSubmitted: (_) => _userNameFocus.requestFocus(),
-                    ),
-                    
-                    const Gap(5),
-                    
-                    CustomTextFormField(
-                      controller: _userNameController,
-                      focusNode: _userNameFocus,
-                      label: "اسم المستخدم",
-                      hint: "مثال: \"ahmad_store\"",
-                      prefixInner: Padding(
-                        padding: const EdgeInsets.all(10.0),
-                        child: SvgPicture.asset(
-                          "assets/svg/User.svg",
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value?.trim().isEmpty ?? true) return "اسم المستخدم مطلوب";
-                        if (value!.trim().length < 3) return "اسم المستخدم قصير جداً";
-                        final hasLetters = RegExp(r'[a-zA-Z\u0600-\u06FF]').hasMatch(value);
-                        if (!hasLetters) return "اسم المستخدم يجب أن يحتوي على أحرف";
-                        return null;
-                      },
-                      onChanged: (value) => _saveCurrentData(),
-                      onFieldSubmitted: (_) => _phoneFocus.requestFocus(),
-                    ),
-                    
-                    const Gap(5),
-                    
-                    CustomTextFormField(
-                      controller: _phoneController,
-                      focusNode: _phoneFocus,
-                      label: "رقم هاتف المتجر",
-                      hint: "07xx Xxx Xxx",
-                      keyboardType: TextInputType.phone,
-                      prefixInner: Padding(
-                        padding: const EdgeInsets.all(10.0),
-                        child: SvgPicture.asset(
-                          "assets/svg/08. Phone.svg",
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value?.trim().isEmpty ?? true) return "رقم الهاتف مطلوب";
-                        final phoneRegex = RegExp(r'^(07[0-9]{9}|07[0-9]{8})$');
-                        if (!phoneRegex.hasMatch(value!.replaceAll(' ', ''))) {
-                          return "رقم الهاتف غير صحيح";
-                        }
-                        return null;
-                      },
-                      onChanged: (value) => _saveCurrentData(),
-                      onFieldSubmitted: (_) => _passwordFocus.requestFocus(),
-                    ),
-                    
-                    const Gap(5),
-                    
-                    CustomTextFormField(
-                      readOnly: true,
-                      label: "شعار / صورة المتجر",
-                      hint: state.brandImage?.name ?? "أضغط هنا",
-                      validator: (value) {
-                        if (state.brandImage == null) return "صورة المتجر مطلوبة";
-                        return null;
-                      },
-                      suffixInner: GestureDetector(
-                        onTap: state.isUploadingImage ? null : _pickImage,
-                        child: Container(
-                          width: 115,
-                          height: 55,
-                          decoration: BoxDecoration(
-                            color: state.isUploadingImage
-                                ? Colors.grey
-                                : Theme.of(context).colorScheme.primary,
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(27),
-                              bottomLeft: Radius.circular(27),
-                            ),
-                          ),
-                          child: Center(
-                            child: state.isUploadingImage
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Text(
-                                    "تحميل الصورة",
-                                    style: TextStyle(
-                                      color: Color(0XFFFAFEFD),
-                                      fontSize: 16,
-                                      fontFamily: "Tajawal",
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    
-                    const Gap(5),
-                    
-                    CustomTextFormField(
-                      controller: _passwordController,
-                      focusNode: _passwordFocus,
-                      label: "الرمز السري",
-                      hint: "أدخل كلمة المرور",
-                      obscureText: _obscurePassword,
-                      prefixInner: Padding(
-                        padding: const EdgeInsets.all(10.0),
-                        child: SvgPicture.asset(
-                          "assets/svg/09. Password.svg",
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                      suffixInner: Padding(
-                        padding: const EdgeInsets.all(10.0),
-                        child: GestureDetector(
-                          onTap: () => setState(() => _obscurePassword = !_obscurePassword),
-                          child: SvgPicture.asset(
-                            _obscurePassword
-                                ? "assets/svg/10. EyeSlash.svg"
-                                : "assets/svg/10. EyeSlash.svg", 
-                          ),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value?.isEmpty ?? true) return "كلمة المرور مطلوبة";
-                        if (value!.length < 6) return "كلمة المرور قصيرة جداً (6 أحرف على الأقل)";
-                        return null;
-                      },
-                      onChanged: (value) => _saveCurrentData(),
-                      onFieldSubmitted: (_) => _confirmPasswordFocus.requestFocus(),
-                    ),
-                    
-                    const Gap(5),
-                    
-                    CustomTextFormField(
-                      controller: _confirmPasswordController,
-                      focusNode: _confirmPasswordFocus,
-                      label: "تأكيد الرمز السري",
-                      hint: "أعد كتابة كلمة المرور",
-                      obscureText: _obscureConfirmPassword,
-                      prefixInner: Padding(
-                        padding: const EdgeInsets.all(10.0),
-                        child: SvgPicture.asset(
-                          "assets/svg/09. Password.svg",
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                      suffixInner: Padding(
-                        padding: const EdgeInsets.all(10.0),
-                        child: GestureDetector(
-                          onTap: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                          child: SvgPicture.asset(
-                            _obscureConfirmPassword
-                                ? "assets/svg/10. EyeSlash.svg"
-                                : "assets/svg/10. EyeSlash.svg",
-                          ),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value?.isEmpty ?? true) return "تأكيد كلمة المرور مطلوب";
-                        if (value != _passwordController.text) return "كلمة المرور غير متطابقة";
-                        return null;
-                      },
-                      onChanged: (value) => _saveCurrentData(),
-                      onFieldSubmitted: (_) => _handleNext(),
-                    ),
-                    
-                    const Gap(50),
-                  ],
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            // ✅ إزالة Expanded و ListView - استخدام Column مباشرة
+            CustomTextFormField(
+              controller: _fullNameController,
+              focusNode: _fullNameFocus,
+              label: "أسم صاحب المتجر",
+              hint: "مثال: \"محمد حسين\"",
+              prefixInner: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: SvgPicture.asset(
+                  "assets/svg/User.svg",
+                  width: 24,
+                  height: 24,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
-              
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Column(
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: FillButton(
-                        label: "التالي",
-                        width: 150,
-                        height: 50,
-                        isLoading: state.isUploadingImage,
-                        onPressed: _handleNext,
-                      ),
+              validator: (value) {
+                if (value?.trim().isEmpty ?? true) return "اسم صاحب المتجر مطلوب";
+                if (value!.trim().length < 2) return "اسم صاحب المتجر قصير جداً";
+                return null;
+              },
+              onChanged: (value) => _saveCurrentData(),
+              onFieldSubmitted: (_) => _brandNameFocus.requestFocus(),
+            ),
+            
+            const Gap(5),
+            
+            CustomTextFormField(
+              controller: _brandNameController,
+              focusNode: _brandNameFocus,
+              label: "اسم المتجر",
+              hint: "مثال: \"معرض الأخوين\"",
+              prefixInner: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: SvgPicture.asset(
+                  "assets/svg/12. Storefront.svg",
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              validator: (value) {
+                if (value?.trim().isEmpty ?? true) return "اسم المتجر مطلوب";
+                if (value!.trim().length < 2) return "اسم المتجر قصير جداً";
+                return null;
+              },
+              onChanged: (value) => _saveCurrentData(),
+              onFieldSubmitted: (_) => _userNameFocus.requestFocus(),
+            ),
+            
+            const Gap(5),
+            
+            CustomTextFormField(
+              controller: _userNameController,
+              focusNode: _userNameFocus,
+              label: "اسم المستخدم",
+              hint: "مثال: \"ahmad_store\"",
+              prefixInner: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: SvgPicture.asset(
+                  "assets/svg/User.svg",
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              validator: (value) {
+                if (value?.trim().isEmpty ?? true) return "اسم المستخدم مطلوب";
+                if (value!.trim().length < 3) return "اسم المستخدم قصير جداً";
+                final hasLetters = RegExp(r'[a-zA-Z\u0600-\u06FF]').hasMatch(value);
+                if (!hasLetters) return "اسم المستخدم يجب أن يحتوي على أحرف";
+                return null;
+              },
+              onChanged: (value) => _saveCurrentData(),
+              onFieldSubmitted: (_) => _phoneFocus.requestFocus(),
+            ),
+            
+            const Gap(5),
+            
+            CustomTextFormField(
+              controller: _phoneController,
+              focusNode: _phoneFocus,
+              label: "رقم هاتف المتجر",
+              hint: "07xx Xxx Xxx",
+              keyboardType: TextInputType.phone,
+              prefixInner: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: SvgPicture.asset(
+                  "assets/svg/08. Phone.svg",
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              validator: (value) {
+                if (value?.trim().isEmpty ?? true) return "رقم الهاتف مطلوب";
+                final phoneRegex = RegExp(r'^(07[0-9]{9}|07[0-9]{8})$');
+                if (!phoneRegex.hasMatch(value!.replaceAll(' ', ''))) {
+                  return "رقم الهاتف غير صحيح";
+                }
+                return null;
+              },
+              onChanged: (value) => _saveCurrentData(),
+              onFieldSubmitted: (_) => _passwordFocus.requestFocus(),
+            ),
+            
+            const Gap(5),
+            
+            CustomTextFormField(
+              readOnly: true,
+              label: "شعار / صورة المتجر",
+              hint: state.brandImage?.name ?? "أضغط هنا",
+              validator: (value) {
+                if (state.brandImage == null) return "صورة المتجر مطلوبة";
+                return null;
+              },
+              suffixInner: GestureDetector(
+                onTap: state.isUploadingImage ? null : _pickImage,
+                child: Container(
+                  width: 115,
+                  height: 55,
+                  decoration: BoxDecoration(
+                    color: state.isUploadingImage
+                        ? Colors.grey
+                        : Theme.of(context).colorScheme.primary,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(27),
+                      bottomLeft: Radius.circular(27),
                     ),
-                    
-                    const Gap(20),
-                    
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "هل لديك حساب؟",
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.secondary,
-                          ),
-                        ),
-                        const Gap(5),
-                        GestureDetector(
-                          onTap: () => context.go(AppRoutes.login),
-                          child: Text(
-                            "تسجيل الدخول",
+                  ),
+                  child: Center(
+                    child: state.isUploadingImage
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            "تحميل الصورة",
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSecondary,
-                              fontWeight: FontWeight.bold,
+                              color: Color(0XFFFAFEFD),
+                              fontSize: 16,
+                              fontFamily: "Tajawal",
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ],
-          ),
+            ),
+            
+            const Gap(5),
+            
+            CustomTextFormField(
+              controller: _passwordController,
+              focusNode: _passwordFocus,
+              label: "الرمز السري",
+              hint: "أدخل كلمة المرور",
+              obscureText: _obscurePassword,
+              prefixInner: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: SvgPicture.asset(
+                  "assets/svg/09. Password.svg",
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              suffixInner: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: GestureDetector(
+                  onTap: () => setState(() => _obscurePassword = !_obscurePassword),
+                  child: SvgPicture.asset(
+                    _obscurePassword
+                        ? "assets/svg/10. EyeSlash.svg"
+                        : "assets/svg/10. EyeSlash.svg", 
+                  ),
+                ),
+              ),
+              validator: (value) {
+                if (value?.isEmpty ?? true) return "كلمة المرور مطلوبة";
+                if (value!.length < 6) return "كلمة المرور قصيرة جداً (6 أحرف على الأقل)";
+                return null;
+              },
+              onChanged: (value) => _saveCurrentData(),
+              onFieldSubmitted: (_) => _confirmPasswordFocus.requestFocus(),
+            ),
+            
+            const Gap(5),
+            
+            CustomTextFormField(
+              controller: _confirmPasswordController,
+              focusNode: _confirmPasswordFocus,
+              label: "تأكيد الرمز السري",
+              hint: "أعد كتابة كلمة المرور",
+              obscureText: _obscureConfirmPassword,
+              prefixInner: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: SvgPicture.asset(
+                  "assets/svg/09. Password.svg",
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              suffixInner: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: GestureDetector(
+                  onTap: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                  child: SvgPicture.asset(
+                    _obscureConfirmPassword
+                        ? "assets/svg/10. EyeSlash.svg"
+                        : "assets/svg/10. EyeSlash.svg",
+                  ),
+                ),
+              ),
+              validator: (value) {
+                if (value?.isEmpty ?? true) return "تأكيد كلمة المرور مطلوب";
+                if (value != _passwordController.text) return "كلمة المرور غير متطابقة";
+                return null;
+              },
+              onChanged: (value) => _saveCurrentData(),
+              onFieldSubmitted: (_) => _handleNext(),
+            ),
+            
+            const Gap(50),
+            
+            // أزرار التحكم في الأسفل
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Column(
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: FillButton(
+                      label: "التالي",
+                      width: 150,
+                      height: 50,
+                      isLoading: state.isUploadingImage,
+                      onPressed: _handleNext,
+                    ),
+                  ),
+                  
+                  const Gap(20),
+                  
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "هل لديك حساب؟",
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
+                      ),
+                      const Gap(5),
+                      GestureDetector(
+                        onTap: () => context.go(AppRoutes.login),
+                        child: Text(
+                          "تسجيل الدخول",
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSecondary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

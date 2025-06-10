@@ -12,6 +12,7 @@ import 'package:Tosell/Features/auth/register/screens/delivery_info_tab.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:Tosell/Features/auth/register/providers/registration_provider.dart';
 import 'package:Tosell/core/utils/GlobalToast.dart';
+import 'package:Tosell/core/helpers/SharedPreferencesHelper.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -42,6 +43,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    // ✅ مسح البيانات عند الخروج من الشاشة
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(registrationNotifierProvider.notifier).reset();
+      }
+    });
     super.dispose();
   }
 
@@ -52,7 +59,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   }
 
   Future<void> _submitRegistration() async {
-    final registrationNotifier = ref.read(registrationNotifierProvider.notifier);
+    final registrationNotifier =  ref.read(registrationNotifierProvider.notifier);
     
     if (!registrationNotifier.validateUserInfo() || !registrationNotifier.validateZones()) {
       final error = ref.read(registrationNotifierProvider).error;
@@ -69,11 +76,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     
     if (success) {
       GlobalToast.showSuccess(message: 'تم التسجيل بنجاح! مرحباً بك في توصيل');
+
       
+    
       if (mounted) {
-        context.go(AppRoutes.home);
+        context.go(AppRoutes.login);
       }
-    } else {
+    }
+    
+    else {
       final error = ref.read(registrationNotifierProvider).error;
       GlobalToast.show(
         message: error ?? 'فشل في التسجيل',
@@ -82,40 +93,102 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     }
   }
 
+  // ✅ دالة تأكيد الخروج
+  Future<bool> _onWillPop() async {
+    final state = ref.read(registrationNotifierProvider);
+    
+    // إذا كانت هناك بيانات مدخلة، اعرض تأكيد
+    if (state.fullName?.isNotEmpty == true || 
+        state.brandName?.isNotEmpty == true ||
+        state.userName?.isNotEmpty == true ||
+        state.phoneNumber?.isNotEmpty == true ||
+        state.brandImage != null ||
+        state.zones.isNotEmpty) {
+      
+      return await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text(
+            'تأكيد الخروج',
+            style: TextStyle(fontFamily: "Tajawal"),
+          ),
+          content: const Text(
+            'سيتم فقدان جميع البيانات المدخلة. هل تريد الخروج؟',
+            style: TextStyle(fontFamily: "Tajawal"),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text(
+                'إلغاء',
+                style: TextStyle(fontFamily: "Tajawal"),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(true);
+                // مسح البيانات عند تأكيد الخروج
+                ref.read(registrationNotifierProvider.notifier).reset();
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text(
+                'خروج',
+                style: TextStyle(fontFamily: "Tajawal"),
+              ),
+            ),
+          ],
+        ),
+      ) ?? false;
+    }
+    
+    return true; // السماح بالخروج إذا لم تكن هناك بيانات
+  }
+
   @override
   Widget build(BuildContext context) {
     final registrationState = ref.watch(registrationNotifierProvider);
     
-    return Scaffold(
-      body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
-        child: Stack(
-          children: [
-            _buildBackgroundSection(),
-            _buildBottomSheetSection(),
-            
-            if (registrationState.isSubmitting)
-              Container(
-                color: Colors.black.withOpacity(0.5),
-                child: const Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircularProgressIndicator(color: Colors.white),
-                      Gap(16),
-                      Text(
-                        'جاري إنشاء الحساب...',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (!didPop) {
+          final shouldPop = await _onWillPop();
+          if (shouldPop && mounted) {
+            context.pop();
+          }
+        }
+      },
+      child: Scaffold(
+        body: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Stack(
+            children: [
+              _buildBackgroundSection(),
+              _buildBottomSheetSection(),
+              
+              if (registrationState.isSubmitting)
+                Container(
+                  color: Colors.black.withOpacity(0.5),
+                  child: const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: Colors.white),
+                        Gap(16),
+                        Text(
+                          'جاري إنشاء الحساب...',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -140,7 +213,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                     ),
                   ),
                   showBackButton: true,
-                  onBackButtonPressed: () => context.push(AppRoutes.login),
+                  onBackButtonPressed: () async {
+                    final shouldPop = await _onWillPop();
+                    if (shouldPop && mounted) {
+                      context.push(AppRoutes.login);
+                    }
+                  },
                 ),
                 _buildLogo(),
                 const Gap(10),
@@ -205,16 +283,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
               topRight: Radius.circular(20),
             ),
           ),
-          child: SingleChildScrollView(
-            controller: scrollController,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Gap(5),
-                _buildTabBar(),
-                _buildTabBarView(),
-              ],
-            ),
+          child: Column(  // ✅ تغيير من SingleChildScrollView إلى Column
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              const Gap(5),
+              _buildTabBar(),
+              Expanded(  // ✅ إضافة Expanded للـ TabBarView
+                child: _buildTabBarView(),
+              ),
+            ],
           ),
         );
       },
@@ -272,17 +349,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   }
 
   Widget _buildTabBarView() {
-    return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.7,
-      child: TabBarView(
-        controller: _tabController,
-        physics: const NeverScrollableScrollPhysics(), // ✅ منع السحب للتنقل
-        children: [
-          UserInfoTab(onNext: _goToNextTab),
-          
-          Column(
+    return TabBarView(
+      controller: _tabController,
+      physics: const NeverScrollableScrollPhysics(),
+      children: [
+        SingleChildScrollView(  // ✅ إضافة scroll منفصل لكل tab
+          child: UserInfoTab(onNext: _goToNextTab),
+        ),
+        
+        SingleChildScrollView(  
+          child: Column(
             children: [
-              Expanded(child: DeliveryInfoTab()),
+              DeliveryInfoTab(),
               
               Container(
                 padding: const EdgeInsets.all(16),
@@ -310,7 +388,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                           );
                           
                           return FilledButton(
-                            onPressed: isSubmitting ? null : _submitRegistration,
+                            onPressed: _submitRegistration,
                             child: isSubmitting
                                 ? const SizedBox(
                                     width: 20,
@@ -330,8 +408,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
               ),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

@@ -29,7 +29,7 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final state = ref.read(registrationNotifierProvider);
       if (state.zones.isEmpty) {
-        ref.read(registrationNotifierProvider.notifier).addZone();
+        ref.read(registrationNotifierProvider.notifier).addMarchentZone();
       }
     });
   }
@@ -267,7 +267,7 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
                         : Colors.grey,
                     height: 24,
                   ),
-                  const Gap(8),
+                  const Gap(15),
                   Text(
                     hasLocation ? 'تم تحديد الموقع' : 'تحديد الموقع',
                     style: context.textTheme.bodyMedium?.copyWith(
@@ -342,7 +342,8 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
           child: InkWell(
             borderRadius: BorderRadius.circular(60),
             onTap: () {
-              ref.read(registrationNotifierProvider.notifier).addZone();
+              ref.read(registrationNotifierProvider.notifier)
+              .addMarchentZone();
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),

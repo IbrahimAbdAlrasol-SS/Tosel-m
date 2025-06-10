@@ -50,13 +50,33 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
   @override
   void dispose() {
     _mapController.dispose();
-    
-    // مسح البيانات عند الخروج من الصفحة
-    _currentLocation = LatLng(33.3152, 44.3661); // العودة للموقع الافتراضي
-    _isLocationSet = false;
-    _isGettingLocation = false;
-    
     super.dispose();
+  }
+
+  // ✅ دالة جديدة للنقر على الخريطة
+  void _onMapTap(TapPosition tapPosition, LatLng point) {
+    setState(() {
+      _currentLocation = point;
+      _isLocationSet = true;
+    });
+
+    HapticFeedback.lightImpact();
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.location_on, color: Colors.white),
+            const Gap(8),
+            Text('تم تحديد الموقع بنجاح', style: TextStyle(fontFamily: "Tajawal")),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
+    
+    print('Manual Location: ${point.latitude}, ${point.longitude}');
   }
 
   Future<void> _setCurrentLocation() async {
@@ -224,6 +244,7 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
                         initialZoom: 13.0,
                         maxZoom: 18.0,
                         minZoom: 5.0,
+                        onTap: _onMapTap,  // ✅ إضافة إمكانية النقر
                       ),
                       children: [
                         // طبقة الخريطة
@@ -266,7 +287,7 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
 
                     // زر تحديد الموقع الحالي
                     Positioned(
-                      bottom: 80,
+                      bottom: 20,
                       right: 16,
                       child: FloatingActionButton.extended(
                         onPressed: _isGettingLocation ? null : _setCurrentLocation,
@@ -296,52 +317,7 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
                     ),
 
                     // معلومات الموقع المحدد
-                    if (_isLocationSet)
-                      Positioned(
-                        bottom: 16,
-                        left: 16,
-                        right: 16,
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.95),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, -2),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(Icons.location_on, color: context.colorScheme.primary, size: 20),
-                                  const Gap(8),
-                                  Text(
-                                    'تم تحديد الموقع',
-                                    style: context.textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: context.colorScheme.primary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const Gap(8),
-                              Text(
-                                'خط العرض: ${_currentLocation.latitude.toStringAsFixed(4)} | خط الطول: ${_currentLocation.longitude.toStringAsFixed(4)}',
-                                style: context.textTheme.bodySmall?.copyWith(
-                                  color: context.colorScheme.onSurface,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
+                   
                     // تعليمات الاستخدام
                     if (!_isLocationSet)
                       Positioned(
@@ -364,7 +340,7 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
                               ),
                               const Gap(8),
                               Text(
-                                'استخدم "تحديد موقعي" للحصول على موقعك الحقيقي',
+                                'انقر على أي مكان في الخريطة أو استخدم "تحديد موقعي"',
                                 style: context.textTheme.bodyMedium?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w500,

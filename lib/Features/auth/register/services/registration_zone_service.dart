@@ -1,5 +1,6 @@
 import 'package:Tosell/Features/auth/register/models/registration_zone.dart';
 import 'package:Tosell/core/Client/BaseClient.dart';
+
 class RegistrationZoneService {
   final BaseClient<RegistrationZone> _baseClient;
   List<RegistrationZone>? _allZonesCache;
@@ -10,6 +11,7 @@ class RegistrationZoneService {
       : _baseClient = BaseClient<RegistrationZone>(
           fromJson: (json) => RegistrationZone.fromJson(json)
         );
+
   Future<List<RegistrationZone>> _getAllZonesWithoutFilter({bool forceRefresh = false}) async {
     try {
       final now = DateTime.now();
@@ -17,10 +19,11 @@ class RegistrationZoneService {
           _allZonesCache != null && 
           _cacheTime != null && 
           now.difference(_cacheTime!) < _cacheDuration;
-      // طول ما الكاش بي بيانات جيبهن منه حته ما تلود ع السيرفر
+      
       if (isCacheValid) {
         return _allZonesCache!;
       }
+
       Map<String, dynamic> queryParams = {
         'pageSize': 1000,
         'timestamp': now.millisecondsSinceEpoch,
@@ -30,17 +33,18 @@ class RegistrationZoneService {
         endpoint: '/zone',
         queryParams: queryParams,
       );
-      // خزن البيانات الجديدة بالكاش
+      
+      // حفظ البيانات الجديدة في الكاش
       _allZonesCache = result.getList;
       _cacheTime = now;
       return _allZonesCache!;
     } catch (e) {
-      // لو صار خطأ، ارجع اللي عندك بالكاش 
+      // في حالة الخطأ، إرجاع الكاش الموجود أو قائمة فارغة
       return _allZonesCache ?? [];
     }
   }
 
-  // هاي الميثود تجيب المحافظات وتفلترهم حسب البحث
+  // ✅ تحديث دالة جلب المحافظات لتعرض 10 افتراضياً
   Future<List<RegistrationGovernorate>> getGovernorates({
     String? query, 
     bool forceRefresh = false
@@ -49,15 +53,18 @@ class RegistrationZoneService {
       final queryText = query?.trim() ?? '';
       final zones = await _getAllZonesWithoutFilter(forceRefresh: forceRefresh);
       final Map<int, RegistrationGovernorate> uniqueGovernorates = {};
-      // استخرج المحافظات  من المناطق (ما نريد تكرار)
+      
+      // استخراج المحافظات الفريدة من المناطق
       for (final zone in zones) {
         if (zone.governorate != null && zone.governorate!.id != null) {
           final gov = zone.governorate!;
           uniqueGovernorates[gov.id!] = gov;
         }
       }
+      
       var allGovernorates = uniqueGovernorates.values.toList();
       allGovernorates.sort((a, b) => (a.name ?? '').compareTo(b.name ?? ''));
+      
       if (queryText.isNotEmpty) {
         final searchQuery = queryText.toLowerCase();
         allGovernorates = allGovernorates.where((gov) {
@@ -66,26 +73,30 @@ class RegistrationZoneService {
                  govName.startsWith(searchQuery) ||
                  _isArabicMatch(govName, searchQuery);
         }).toList();
+        
+        // ترتيب النتائج: الذي يبدأ بالبحث أولاً
         allGovernorates.sort((a, b) {
           final aName = (a.name ?? '').toLowerCase();
           final bName = (b.name ?? '').toLowerCase();
           final aStarts = aName.startsWith(searchQuery);
           final bStarts = bName.startsWith(searchQuery);
+          
           if (aStarts && !bStarts) return -1;
           if (!aStarts && bStarts) return 1;
           return aName.compareTo(bName);
         });
       } else {
-// اذا ماكو نتائج جيب اول 10 
+        // ✅ عرض 10 محافظات افتراضياً بدلاً من كل المحافظات
         allGovernorates = allGovernorates.take(10).toList();
       }   
+      
       return allGovernorates;
     } catch (e) {
       return [];
     }
   }
 
-  // هاي الميثود تجيب المناطق حسب المحافظة المختارة
+  // ✅ تحديث دالة جلب المناطق بحسب المحافظة
   Future<List<RegistrationZone>> getZonesByGovernorate({
     required int governorateId,
     String? query,
@@ -94,12 +105,15 @@ class RegistrationZoneService {
     try {
       final queryText = query?.trim() ?? '';
       final allZones = await _getAllZonesWithoutFilter(forceRefresh: forceRefresh); 
-      // فلتر المناطق حسب المحافظة
+      
+      // فلترة المناطق حسب المحافظة المحددة
       var zonesInGovernorate = allZones.where((zone) => 
         zone.governorate?.id == governorateId
       ).toList();
+      
       zonesInGovernorate.sort((a, b) => (a.name ?? '').compareTo(b.name ?? ''));
-      // لو في بحث، فلتر أكثر
+      
+      // البحث في المناطق إذا تم إدخال نص بحث
       if (queryText.isNotEmpty) {
         final searchQuery = queryText.toLowerCase();
         zonesInGovernorate = zonesInGovernorate.where((zone) {
@@ -108,6 +122,8 @@ class RegistrationZoneService {
                  zoneName.startsWith(searchQuery) ||
                  _isArabicMatch(zoneName, searchQuery);
         }).toList();
+        
+        // ترتيب النتائج
         zonesInGovernorate.sort((a, b) {
           final aName = (a.name ?? '').toLowerCase();
           final bName = (b.name ?? '').toLowerCase();
@@ -119,34 +135,38 @@ class RegistrationZoneService {
           return aName.compareTo(bName);
         });
       } else {
+        // عرض 10 مناطق افتراضياً
         zonesInGovernorate = zonesInGovernorate.take(10).toList();
       } 
+      
       return zonesInGovernorate;
     } catch (e) {
       return [];
     }
   }
-  // تطوير البخث , في حال كتب نصوص تحوي حركات 
+  
+  // دالة تحسين البحث العربي
   bool _isArabicMatch(String text, String query) {
     final cleanText = text.replaceAll(RegExp(r'[ًٌٍَُِّْ\s]+'), '');  
     final cleanQuery = query.replaceAll(RegExp(r'[ًٌٍَُِّْ\s]+'), ''); 
-    final textWords = cleanText.split(' ').where((w) => w.isNotEmpty); // احجي ويه ابو الباك عليهن 
-    final queryWords = cleanQuery.split(' ').where((w) => w.isNotEmpty); // هاي هم 
+    
+    final textWords = cleanText.split(' ').where((w) => w.isNotEmpty);
+    final queryWords = cleanQuery.split(' ').where((w) => w.isNotEmpty);
+    
     return queryWords.every((queryWord) => 
         textWords.any((textWord) => textWord.contains(queryWord))
     );
   }
-  // هاي الميثود تمسح الكاش (لو تريد بيانات جديدة)
+  
+  // مسح الكاش
   void clearCache() {
     _allZonesCache = null;
     _cacheTime = null;
-
   }
 
+  // تحديث البيانات بقوة
   Future<void> refreshData() async {
     clearCache();
     await _getAllZonesWithoutFilter(forceRefresh: true);
-
   }
-
 }

@@ -84,7 +84,6 @@ class RegistrationState {
   }
 }
 
-/// معلومات المنطقة للتسجيل
 class RegistrationZoneInfo {
   final RegistrationGovernorate? selectedGovernorate;
   final RegistrationZone? selectedZone;
@@ -141,7 +140,6 @@ class RegistrationNotifier extends _$RegistrationNotifier {
     return const RegistrationState();
   }
 
-  /// تحديث معلومات المستخدم
   void updateUserInfo({
     String? fullName,
     String? brandName,
@@ -161,12 +159,10 @@ class RegistrationNotifier extends _$RegistrationNotifier {
     );
   }
 
-  /// تحديد صورة العلامة التجارية
   void setBrandImage(XFile image) {
     state = state.copyWith(brandImage: image, error: null);
   }
 
-  /// رفع الصورة
   Future<bool> uploadBrandImage() async {
     if (state.brandImage == null) return false;
 
@@ -196,13 +192,12 @@ class RegistrationNotifier extends _$RegistrationNotifier {
     }
   }
 
-  /// إضافة منطقة جديدة
-  void addZone() {
-    final newZones = List<RegistrationZoneInfo>.from(state.zones)..add(RegistrationZoneInfo());
+  void addMarchentZone() {
+    final newZones = List<RegistrationZoneInfo>.from(state.zones)
+    ..add(RegistrationZoneInfo());
     state = state.copyWith(zones: newZones);
   }
 
-  /// تحديث معلومات منطقة
   void updateZone(int index, RegistrationZoneInfo zoneInfo) {
     if (index >= state.zones.length) return;
 
@@ -211,7 +206,6 @@ class RegistrationNotifier extends _$RegistrationNotifier {
     state = state.copyWith(zones: newZones);
   }
 
-  /// حذف منطقة
   void removeZone(int index) {
     if (index >= state.zones.length || state.zones.length <= 1) return;
 
@@ -219,12 +213,10 @@ class RegistrationNotifier extends _$RegistrationNotifier {
     state = state.copyWith(zones: newZones);
   }
 
-  /// جلب المناطق المتاحة
   Future<void> loadAvailableZones() async {
     state = state.copyWith(isLoadingZones: true, error: null);
 
     try {
-      // استخدام RegistrationZoneService الموجود
       final zones = await _zoneService.getGovernorates();
       
       state = state.copyWith(
@@ -239,7 +231,6 @@ class RegistrationNotifier extends _$RegistrationNotifier {
     }
   }
 
-  /// التحقق من صحة بيانات الخطوة الأولى
   bool validateUserInfo() {
     final s = state;
     if (s.fullName?.isEmpty ?? true) {
@@ -275,7 +266,6 @@ class RegistrationNotifier extends _$RegistrationNotifier {
     return true;
   }
 
-  /// التحقق من صحة بيانات المناطق
   bool validateZones() {
     if (state.zones.isEmpty) {
       state = state.copyWith(error: 'يجب إضافة منطقة واحدة على الأقل');
@@ -293,14 +283,11 @@ class RegistrationNotifier extends _$RegistrationNotifier {
     return true;
   }
 
-  /// إرسال التسجيل
   Future<bool> submitRegistration() async {
-    // التحقق من البيانات
     if (!validateUserInfo() || !validateZones()) {
       return false;
     }
 
-    // التأكد من رفع الصورة
     if (state.uploadedImageUrl == null) {
       final uploaded = await uploadBrandImage();
       if (!uploaded) return false;
@@ -311,7 +298,6 @@ class RegistrationNotifier extends _$RegistrationNotifier {
     try {
       final zonesData = state.zones.map((z) => z.toJson()).toList();
       
-      // تحديد النوع بناءً على المنطقة الأولى
       final  firstZoneType = state.zones.first.selectedZone?.type ?? 1;
 
       final (user, error) = await _authService.register(
@@ -344,7 +330,6 @@ class RegistrationNotifier extends _$RegistrationNotifier {
     }
   }
 
-  /// إعادة تعيين الحالة
   void reset() {
     state = const RegistrationState();
   }
@@ -354,7 +339,6 @@ class RegistrationNotifier extends _$RegistrationNotifier {
     state = state.copyWith(zones: newZones);
   }
 
-  /// تحديث معلومات منطقة
   void updateZoneInfo(int index, RegistrationZoneInfo zoneInfo) {
     if (index >= state.zones.length) return;
 
@@ -363,7 +347,6 @@ class RegistrationNotifier extends _$RegistrationNotifier {
     state = state.copyWith(zones: newZones, error: null);
   }
 
-  /// حذف منطقة
   void deleteZone(int index) {
     if (index >= state.zones.length || state.zones.length <= 1) return;
 
