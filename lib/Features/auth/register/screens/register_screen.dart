@@ -1,5 +1,6 @@
 import 'package:Tosell/Features/auth/login/providers/auth_provider.dart';
 import 'package:Tosell/Features/auth/models/User.dart';
+import 'package:Tosell/Features/profile/models/zone.dart';
 import 'package:gap/gap.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:flutter/material.dart';
@@ -12,7 +13,6 @@ import 'package:Tosell/Features/auth/register/screens/user_info_tab.dart';
 import 'package:Tosell/Features/auth/register/widgets/build_background.dart';
 import 'package:Tosell/Features/auth/register/screens/delivery_info_tab.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:Tosell/Features/auth/register/providers/registration_provider.dart';
 import 'package:Tosell/core/utils/GlobalToast.dart';
 import 'package:Tosell/core/helpers/SharedPreferencesHelper.dart';
 
@@ -27,6 +27,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _currentIndex = 0;
+  bool _isSubmitting = false;
+
+  // ✅ بيانات المستخدم
+  String? fullName;
+  String? brandName;
+  String? userName;
+  String? phoneNumber;
+  String? password;
+  String? brandImg;
+
+  // ✅ بيانات المناطق مع الإحداثيات
+  List<Zone> selectedZones = [];
+  double? latitude;
+  double? longitude;
+  String? nearestLandmark;
 
   @override
   void initState() {
@@ -45,12 +60,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   @override
   void dispose() {
     _tabController.dispose();
-    // ✅ مسح البيانات عند الخروج من الشاشة
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        ref.read(authNotifierProvider.notifier).toString();
-      }
-    });
     super.dispose();
   }
 
@@ -60,39 +69,152 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     }
   }
 
+  // ✅ تحديث بيانات المستخدم من UserInfoTab
+  void _updateUserInfo({
+    String? fullName,
+    String? brandName,
+    String? userName,
+    String? phoneNumber,
+    String? password,
+    String? brandImg,
+  }) {
+    setState(() {
+      if (fullName != null) this.fullName = fullName;
+      if (brandName != null) this.brandName = brandName;
+      if (userName != null) this.userName = userName;
+      if (phoneNumber != null) this.phoneNumber = phoneNumber;
+      if (password != null) this.password = password;
+      if (brandImg != null) this.brandImg = brandImg;
+    });
+  }
+
+  // ✅ تحديث المناطق والإحداثيات من DeliveryInfoTab
+  void _updateZonesWithLocation({
+    required List<Zone> zones,
+    double? latitude,
+    double? longitude,
+    String? nearestLandmark,
+  }) {
+    setState(() {
+      selectedZones = zones;
+      this.latitude = latitude;
+      this.longitude = longitude;
+      this.nearestLandmark = nearestLandmark;
+    });
+  }
+
+  // ✅ التحقق من صحة البيانات
+  bool _validateData() {
+    if (fullName?.isEmpty ?? true) {
+      GlobalToast.show(message: 'اسم صاحب المتجر مطلوب', backgroundColor: Colors.red);
+      _tabController.animateTo(0);
+      return false;
+    }
+    if (brandName?.isEmpty ?? true) {
+      GlobalToast.show(message: 'اسم المتجر مطلوب', backgroundColor: Colors.red);
+      _tabController.animateTo(0);
+      return false;
+    }
+    if (userName?.isEmpty ?? true) {
+      GlobalToast.show(message: 'اسم المستخدم مطلوب', backgroundColor: Colors.red);
+      _tabController.animateTo(0);
+      return false;
+    }
+    if (phoneNumber?.isEmpty ?? true) {
+      GlobalToast.show(message: 'رقم الهاتف مطلوب', backgroundColor: Colors.red);
+      _tabController.animateTo(0);
+      return false;
+    }
+    if (password?.isEmpty ?? true) {
+      GlobalToast.show(message: 'كلمة المرور مطلوبة', backgroundColor: Colors.red);
+      _tabController.animateTo(0);
+      return false;
+    }
+    if (brandImg?.isEmpty ?? true) {
+      GlobalToast.show(message: 'صورة المتجر مطلوبة', backgroundColor: Colors.red);
+      _tabController.animateTo(0);
+      return false;
+    }
+    if (selectedZones.isEmpty) {
+      GlobalToast.show(message: 'يجب إضافة منطقة واحدة على الأقل', backgroundColor: Colors.red);
+      _tabController.animateTo(1);
+      return false;
+    }
+
+    return true;
+  }
+
+  // ✅ إرسال التسجيل باستخدام auth_provider المحدث
   Future<void> _submitRegistration() async {
- var result = await ref.read(authNotifierProvider.notifier).rehister(
-  user: User(),
- );
+    if (!_validateData()) return;
 
- if(result.$1==null){
-  GlobalToast.show(message: result.$2??'',backgroundColor: context.colorScheme.error);
-  }else{
-  GlobalToast.show(message: ' secseed',backgroundColor: context.colorScheme.primary);
-  if(context.mounted){
-    context.go(AppRoutes.login);
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      print('🚀 بدء عملية التسجيل...');
+      print('📋 البيانات:');
+      print('- الاسم: $fullName');
+      print('- المتجر: $brandName');
+      print('- المستخدم: $userName');
+      print('- الهاتف: $phoneNumber');
+      print('- الصورة: $brandImg');
+      print('- المناطق: ${selectedZones.length}');
+      print('- الإحداثيات: $latitude, $longitude');
+      print('- أقرب نقطة: $nearestLandmark');
+
+      // ✅ استخدام auth_provider المحدث
+      final result = await ref.read(authNotifierProvider.notifier).register(
+        fullName: fullName!,
+        brandName: brandName!,
+        userName: userName!,
+        phoneNumber: phoneNumber!,
+        password: password!,
+        brandImg: brandImg!,
+        zones: selectedZones,
+        latitude: latitude,
+        longitude: longitude,
+        nearestLandmark: nearestLandmark,
+      );
+
+      if (result.$1 != null) {
+        print('✅ نجح التسجيل: ${result.$1!.fullName}');
+        GlobalToast.showSuccess(message: 'تم التسجيل بنجاح! مرحباً بك في توصيل');
+        
+        if (mounted) {
+          context.go(AppRoutes.home);
+        }
+      } else {
+        print('❌ فشل التسجيل: ${result.$2}');
+        GlobalToast.show(
+          message: result.$2 ?? 'فشل في التسجيل',
+          backgroundColor: Colors.red,
+        );
+      }
+    } catch (e) {
+      print('💥 خطأ في التسجيل: $e');
+      GlobalToast.show(
+        message: 'خطأ في التسجيل: ${e.toString()}',
+        backgroundColor: Colors.red,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
   }
 
-  }
-
-  
-
-
-
-   
-}
-
-  // ✅ دالة تأكيد الخروج
   Future<bool> _onWillPop() async {
-    final state = ref.read(authNotifierProvider.notifier);
-    
-    // إذا كانت هناك بيانات مدخلة، اعرض تأكيد
-    if (state.fullName?.isNotEmpty == true || 
-        state.brandName?.isNotEmpty == true ||
-        state.userName?.isNotEmpty == true ||
-        state.phoneNumber?.isNotEmpty == true ||
-        state.brandImage != null ||
-        state.zones.isNotEmpty) {
+    // تحقق من وجود بيانات مدخلة
+    if (fullName?.isNotEmpty == true || 
+        brandName?.isNotEmpty == true ||
+        userName?.isNotEmpty == true ||
+        phoneNumber?.isNotEmpty == true ||
+        brandImg?.isNotEmpty == true ||
+        selectedZones.isNotEmpty) {
       
       return await showDialog<bool>(
         context: context,
@@ -108,32 +230,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text(
-                'إلغاء',
-                style: TextStyle(fontFamily: "Tajawal"),
-              ),
+              child: const Text('إلغاء', style: TextStyle(fontFamily: "Tajawal")),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(true);
-              },
+              onPressed: () => Navigator.of(context).pop(true),
               style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text(
-                'خروج',
-                style: TextStyle(fontFamily: "Tajawal"),
-              ),
+              child: const Text('خروج', style: TextStyle(fontFamily: "Tajawal")),
             ),
           ],
         ),
       ) ?? false;
     }
     
-    return true; // السماح بالخروج إذا لم تكن هناك بيانات
+    return true;
   }
 
   @override
   Widget build(BuildContext context) {
-    
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) async {
@@ -152,7 +265,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
               _buildBackgroundSection(),
               _buildBottomSheetSection(),
               
-              if (registrationState.isSubmitting)
+              if (_isSubmitting)
                 Container(
                   color: Colors.black.withOpacity(0.5),
                   child: const Center(
@@ -191,7 +304,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                 const Gap(25),
                 CustomAppBar(
                   titleWidget: Text(
-                    'تسجيل دخول', 
+                    'إنشاء حساب',
                     style: context.textTheme.bodyMedium!.copyWith(
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
@@ -269,12 +382,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
               topRight: Radius.circular(20),
             ),
           ),
-          child: Column(  // ✅ تغيير من SingleChildScrollView إلى Column
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               const Gap(5),
               _buildTabBar(),
-              Expanded(  // ✅ إضافة Expanded للـ TabBarView
+              Expanded(
                 child: _buildTabBarView(),
               ),
             ],
@@ -339,14 +452,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
       controller: _tabController,
       physics: const NeverScrollableScrollPhysics(),
       children: [
-        SingleChildScrollView( 
-          child: UserInfoTab(onNext: _goToNextTab),
+        SingleChildScrollView(
+          child: UserInfoTab(
+            onNext: _goToNextTab,
+            onUserInfoChanged: _updateUserInfo,
+            initialData: {
+              'fullName': fullName,
+              'brandName': brandName,
+              'userName': userName,
+              'phoneNumber': phoneNumber,
+              'password': password,
+              'brandImg': brandImg,
+            },
+          ),
         ),
         
-        SingleChildScrollView(  
+        SingleChildScrollView(
           child: Column(
             children: [
-              DeliveryInfoTab(),
+              DeliveryInfoTab(
+                onZonesChangedWithLocation: _updateZonesWithLocation,
+                initialZones: selectedZones,
+              ),
               
               Container(
                 padding: const EdgeInsets.all(16),
@@ -367,24 +494,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                     const Gap(16),
                     Expanded(
                       flex: 2,
-                      child: Consumer(
-                        builder: (context, ref, child) {
-                          ;
-                          
-                          return FilledButton(
-                            onPressed: _submitRegistration,
-                            child: const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-
-const Text('إنشاء الحساب')
-                          );
-                        },
+                      child: FilledButton(
+                        onPressed: _isSubmitting ? null : _submitRegistration,
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('إنشاء الحساب'),
                       ),
                     ),
                   ],

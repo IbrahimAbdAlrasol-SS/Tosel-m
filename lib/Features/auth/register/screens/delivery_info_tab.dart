@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:Tosell/Features/auth/login/providers/auth_provider.dart';
-import 'package:Tosell/Features/profile/providers/zone_provider.dart';
 import 'package:Tosell/Features/profile/services/governorate_service.dart';
 import 'package:Tosell/Features/profile/services/zone_service.dart';
 import 'package:Tosell/Features/profile/models/zone.dart';
@@ -15,10 +13,74 @@ import 'package:Tosell/core/utils/extensions.dart';
 import 'package:Tosell/core/widgets/CustomTextFormField.dart';
 import 'package:Tosell/core/widgets/custom_search_drop_down.dart';
 import 'package:Tosell/core/router/app_router.dart';
-import 'package:Tosell/Features/auth/register/providers/registration_provider.dart';
+
+// ✅ نموذج بسيط لمعلومات المنطقة مع الإحداثيات
+class ZoneLocationInfo {
+  Governorate? selectedGovernorate;
+  Zone? selectedZone;
+  String nearestLandmark;
+  double? latitude;
+  double? longitude;
+
+  ZoneLocationInfo({
+    this.selectedGovernorate,
+    this.selectedZone,
+    this.nearestLandmark = '',
+    this.latitude,
+    this.longitude,
+  });
+
+  ZoneLocationInfo copyWith({
+    Governorate? selectedGovernorate,
+    Zone? selectedZone,
+    String? nearestLandmark,
+    double? latitude,
+    double? longitude,
+  }) {
+    return ZoneLocationInfo(
+      selectedGovernorate: selectedGovernorate ?? this.selectedGovernorate,
+      selectedZone: selectedZone ?? this.selectedZone,
+      nearestLandmark: nearestLandmark ?? this.nearestLandmark,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+    );
+  }
+
+  // ✅ تحويل إلى Zone كامل للإرسال
+  Zone? toZone() {
+    if (selectedZone == null) {
+      return null;
+    }
+    
+    return Zone(
+      id: selectedZone!.id,
+      name: selectedZone!.name,
+      type: selectedZone!.type,
+      governorate: selectedZone!.governorate,
+    );
+  }
+
+  bool get isValid =>
+      selectedZone != null &&
+      nearestLandmark.isNotEmpty &&
+      latitude != null &&
+      longitude != null;
+}
 
 class DeliveryInfoTab extends ConsumerStatefulWidget {
-  const DeliveryInfoTab({super.key});
+  final Function({
+    required List<Zone> zones,
+    double? latitude,
+    double? longitude,
+    String? nearestLandmark,
+  }) onZonesChangedWithLocation;
+  final List<Zone> initialZones;
+
+  const DeliveryInfoTab({
+    super.key,
+    required this.onZonesChangedWithLocation,
+    this.initialZones = const [],
+  });
 
   @override
   ConsumerState<DeliveryInfoTab> createState() => _DeliveryInfoTabState();
@@ -28,55 +90,69 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
   Set<int> expandedTiles = {};
   final GovernorateService _governorateService = GovernorateService();
   final ZoneService _zoneService = ZoneService();
+  
+  // ✅ قائمة المناطق المحلية مع الإحداثيات
+  List<ZoneLocationInfo> zones = [];
 
   @override
-  // void initState() {
-  //   super.initState();
-  //   WidgetsBinding.instance.addPostFrameCallback((_) {
-  //     final state = ref.read(authNotifierProvider.notifier);
-  //     if (state.zones.isEmpty) {
-  //       ref.read(registrationNotifierProvider.notifier).addMarchentZone();
-  //     }
-  //   });
-  // }
+  void initState() {
+    super.initState();
+    
+    // ✅ تحميل البيانات الأولية أو إضافة منطقة فارغة
+    if (widget.initialZones.isNotEmpty) {
+      zones = widget.initialZones.map((zone) => ZoneLocationInfo(selectedZone: zone)).toList();
+    } else {
+      zones = [ZoneLocationInfo()];
+    }
+  }
+
+  // ✅ تحديث المناطق في الـ parent مع الإحداثيات
+  void _updateParent() {
+    final validZones = zones
+        .where((zone) => zone.selectedZone != null)
+        .map((zone) => zone.toZone())
+        .where((zone) => zone != null)
+        .cast<Zone>()
+        .toList();
+    
+    // ✅ أخذ الإحداثيات من أول منطقة صالحة
+    final firstValidZone = zones.firstWhere(
+      (zone) => zone.isValid, 
+      orElse: () => ZoneLocationInfo()
+    );
+    
+    widget.onZonesChangedWithLocation(
+      zones: validZones,
+      latitude: firstValidZone.latitude,
+      longitude: firstValidZone.longitude,
+      nearestLandmark: firstValidZone.nearestLandmark,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(zoneNotifierProvider);
-
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.only(bottom: 24),
-        child: state.when(
-            data: (zones) => _buildUi(state, zones),
-            error: (error, _) => Center(
-                  child: Text(error.toString()),
-                ),
-            loading: () => const Center(
-                  child: CircularProgressIndicator(),
-                )),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ...zones.asMap().entries.map((entry) {
+              final index = entry.key;
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6),
+                child: _buildLocationCard(index, zones[index]),
+              );
+            }),
+            const SizedBox(height: 12),
+            _buildAddLocationButton(),
+          ],
+        ),
       ),
     );
   }
 
-  Column _buildUi(AsyncValue<List<Zone>> state, List<Zone> zones) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ...zones.asMap().entries.map((entry) {
-          final index = entry.key;
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6),
-            child: _buildLocationCard(index, zones[index]),
-          );
-        }),
-        const SizedBox(height: 12),
-        _buildAddLocationButton(),
-      ],
-    );
-  }
-
-  Widget _buildLocationCard(int index, Zone zoneInfo) {
+  Widget _buildLocationCard(int index, ZoneLocationInfo zoneInfo) {
     bool isExpanded = expandedTiles.contains(index);
 
     return Card(
@@ -102,11 +178,10 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
                 textAlign: TextAlign.right,
               ),
             ),
-            if (ref.watch(registrationNotifierProvider).zones.length > 1)
+            if (zones.length > 1)
               IconButton(
                 onPressed: () => _removeLocation(index),
-                icon: const Icon(Icons.delete_outline,
-                    color: Colors.red, size: 20),
+                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
               ),
           ],
         ),
@@ -145,8 +220,7 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
     );
   }
 
-  /// ✅ dropdown المحافظات - يستخدم GovernorateService
-  Widget _buildGovernorateDropdown(int index, RegistrationZoneInfo zoneInfo) {
+  Widget _buildGovernorateDropdown(int index, ZoneLocationInfo zoneInfo) {
     return RegistrationSearchDropDown<Governorate>(
       label: "المحافظة",
       hint: "ابحث عن المحافظة... مثال: 'بغداد'",
@@ -154,10 +228,8 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
       itemAsString: (gov) => gov.name ?? '',
       asyncItems: (query) async {
         try {
-          // جلب جميع المحافظات
           final governorates = await _governorateService.getAllZones();
-
-          // تصفية حسب البحث إذا كان موجود
+          
           if (query.trim().isNotEmpty) {
             return governorates
                 .where((gov) =>
@@ -165,7 +237,7 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
                     false)
                 .toList();
           }
-
+          
           return governorates;
         } catch (e) {
           print('Error loading governorates: $e');
@@ -173,13 +245,13 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
         }
       },
       onChanged: (governorate) {
-        final updatedZone = zoneInfo.copyWith(
-          selectedGovernorate: governorate,
-          selectedZone: null, // مسح المنطقة المختارة عند تغيير المحافظة
-        );
-        ref
-            .read(registrationNotifierProvider.notifier)
-            .updateZone(index, updatedZone);
+        setState(() {
+          zones[index] = zones[index].copyWith(
+            selectedGovernorate: governorate,
+            selectedZone: null, // مسح المنطقة المختارة عند تغيير المحافظة
+          );
+        });
+        _updateParent();
       },
       itemBuilder: (context, governorate) => Row(
         children: [
@@ -204,8 +276,7 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
     );
   }
 
-  /// ✅ dropdown المناطق - حل مبسط بدون selectedValue
-  Widget _buildZoneDropdown(int index, RegistrationZoneInfo zoneInfo) {
+  Widget _buildZoneDropdown(int index, ZoneLocationInfo zoneInfo) {
     final selectedGov = zoneInfo.selectedGovernorate;
 
     return RegistrationSearchDropDown<Zone>(
@@ -213,83 +284,42 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
       hint: selectedGov == null
           ? "اختر المحافظة أولاً"
           : zoneInfo.selectedZone?.name ?? "ابحث عن المنطقة...",
-      // selectedValue: zoneInfo.selectedZone, // مُعطل مؤقتاً للاختبار
       itemAsString: (zone) => zone.name ?? '',
       asyncItems: (query) async {
-        // إذا لم يتم اختيار محافظة، ارجع قائمة فارغة
         if (selectedGov?.id == null) {
-          print('❌ لا توجد محافظة مختارة');
           return [];
         }
 
         try {
-          print(
-              '🔍 جاري جلب المناطق للمحافظة: ${selectedGov!.name} (ID: ${selectedGov!.id})');
-
-          // جلب جميع المناطق
           final allZones = await _zoneService.getAllZones();
-          print('📋 تم جلب ${allZones.length} منطقة إجمالي');
-
+          
           if (allZones.isEmpty) {
-            print('⚠️ لا توجد مناطق في الـ API');
             return [];
           }
 
-          // عرض عينة من البيانات للتأكد من الهيكل
-          if (allZones.isNotEmpty) {
-            final sampleZone = allZones.first;
-            print('📝 عينة من البيانات:');
-            print('   اسم المنطقة: ${sampleZone.name}');
-            print('   اسم المحافظة: ${sampleZone.governorate?.name}');
-            print('   ID المحافظة: ${sampleZone.governorate?.id}');
-            print('   نوع المحافظة المطلوب: ${selectedGov!.id}');
-          }
-
-          // تصفية المناطق حسب المحافظة المختارة
           var filteredZones = allZones.where((zone) {
-            final zoneGovId = zone.governorate?.id;
-            final selectedGovId = selectedGov!.id;
-
-            print('🔍 مقارنة: $zoneGovId == $selectedGovId (${zone.name})');
-
-            return zoneGovId == selectedGovId;
+            return zone.governorate?.id == selectedGov!.id;
           }).toList();
 
-          print(
-              '🎯 تم العثور على ${filteredZones.length} منطقة للمحافظة ${selectedGov!.name}');
-
-          // عرض أسماء المناطق المفلترة
-          if (filteredZones.isNotEmpty) {
-            print('📍 المناطق المفلترة:');
-            for (var zone in filteredZones.take(5)) {
-              print('   - ${zone.name}');
-            }
-          }
-
-          // تصفية حسب البحث إذا كان موجود
           if (query.trim().isNotEmpty) {
-            final beforeSearch = filteredZones.length;
             filteredZones = filteredZones
                 .where((zone) =>
                     zone.name?.toLowerCase().contains(query.toLowerCase()) ??
                     false)
                 .toList();
-            print(
-                '🔍 بعد البحث عن "$query": ${filteredZones.length} من $beforeSearch');
           }
 
           return filteredZones;
         } catch (e, stackTrace) {
           print('❌ خطأ في جلب المناطق: $e');
-          print('📋 Stack trace: $stackTrace');
           return [];
         }
       },
       onChanged: (zone) {
-        final updatedZone = zoneInfo.copyWith(selectedZone: zone);
-        ref
-            .read(registrationNotifierProvider.notifier)
-            .updateZone(index, updatedZone);
+        setState(() {
+          zones[index] = zones[index].copyWith(selectedZone: zone);
+        });
+        _updateParent();
       },
       itemBuilder: (context, zone) => Row(
         children: [
@@ -329,21 +359,21 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
     );
   }
 
-  Widget _buildNearestPointField(int index, RegistrationZoneInfo zoneInfo) {
+  Widget _buildNearestPointField(int index, ZoneLocationInfo zoneInfo) {
     return CustomTextFormField(
       label: "اقرب نقطة دالة",
       hint: "مثال: 'قرب مطعم الخيمة'",
       selectedValue: zoneInfo.nearestLandmark,
       onChanged: (value) {
-        final updatedZone = zoneInfo.copyWith(nearestLandmark: value);
-        ref
-            .read(registrationNotifierProvider.notifier)
-            .updateZone(index, updatedZone);
+        setState(() {
+          zones[index] = zones[index].copyWith(nearestLandmark: value);
+        });
+        _updateParent();
       },
     );
   }
 
-  Widget _buildLocationPicker(int index, zo zoneInfo) {
+  Widget _buildLocationPicker(int index, ZoneLocationInfo zoneInfo) {
     final hasLocation = zoneInfo.latitude != null && zoneInfo.longitude != null;
 
     return Column(
@@ -358,7 +388,6 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
         ),
         const Gap(5),
 
-        // زر تحديد الموقع
         InkWell(
           onTap: () => _openLocationPicker(index, zoneInfo),
           borderRadius: BorderRadius.circular(16),
@@ -462,7 +491,10 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
           child: InkWell(
             borderRadius: BorderRadius.circular(60),
             onTap: () {
-              ref.read(registrationNotifierProvider.notifier).addMarchentZone();
+              setState(() {
+                zones.add(ZoneLocationInfo());
+              });
+              _updateParent();
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -494,14 +526,17 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
   }
 
   void _removeLocation(int index) {
-    ref.read(registrationNotifierProvider.notifier).removeZone(index);
+    if (zones.length <= 1) return;
+
     setState(() {
+      zones.removeAt(index);
       expandedTiles.remove(index);
     });
+    _updateParent();
   }
 
   Future<void> _openLocationPicker(
-      int index, RegistrationZoneInfo zoneInfo) async {
+      int index, ZoneLocationInfo zoneInfo) async {
     try {
       final result = await context.push(
         AppRoutes.mapSelection,
@@ -513,13 +548,13 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
 
       if (result != null && result is Map<String, dynamic>) {
         // حفظ الإحداثيات في الـ state
-        final updatedZone = zoneInfo.copyWith(
-          latitude: result['latitude'],
-          longitude: result['longitude'],
-        );
-        ref
-            .read(registrationNotifierProvider.notifier)
-            .updateZone(index, updatedZone);
+        setState(() {
+          zones[index] = zones[index].copyWith(
+            latitude: result['latitude'],
+            longitude: result['longitude'],
+          );
+        });
+        _updateParent();
 
         // إظهار رسالة نجاح
         ScaffoldMessenger.of(context).showSnackBar(
