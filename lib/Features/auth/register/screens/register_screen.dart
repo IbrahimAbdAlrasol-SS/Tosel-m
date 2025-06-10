@@ -1,5 +1,5 @@
+// lib/Features/auth/register/screens/register_screen.dart
 import 'package:Tosell/Features/auth/login/providers/auth_provider.dart';
-import 'package:Tosell/Features/auth/models/User.dart';
 import 'package:Tosell/Features/profile/models/zone.dart';
 import 'package:gap/gap.dart';
 import 'package:flutter_svg/svg.dart';
@@ -69,7 +69,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     }
   }
 
-  // ✅ تحديث بيانات المستخدم من UserInfoTab
   void _updateUserInfo({
     String? fullName,
     String? brandName,
@@ -86,9 +85,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
       if (password != null) this.password = password;
       if (brandImg != null) this.brandImg = brandImg;
     });
+
+    print('📝 تحديث بيانات المستخدم:');
+    print('   الاسم: ${this.fullName}');
+    print('   المتجر: ${this.brandName}');
+    print('   اسم المستخدم: ${this.userName}');
+    print('   الهاتف: ${this.phoneNumber}');
+    print('   الصورة: ${this.brandImg?.isNotEmpty == true ? 'موجودة' : 'غير موجودة'}');
   }
 
-  // ✅ تحديث المناطق والإحداثيات من DeliveryInfoTab
+  /// ✅ تحديث المناطق والإحداثيات من DeliveryInfoTab
   void _updateZonesWithLocation({
     required List<Zone> zones,
     double? latitude,
@@ -101,9 +107,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
       this.longitude = longitude;
       this.nearestLandmark = nearestLandmark;
     });
+
+    print('🌍 تحديث المناطق والإحداثيات:');
+    print('   عدد المناطق: ${zones.length}');
+    print('   الإحداثيات: $latitude, $longitude');
+    print('   أقرب نقطة: $nearestLandmark');
   }
 
-  // ✅ التحقق من صحة البيانات
   bool _validateData() {
     if (fullName?.isEmpty ?? true) {
       GlobalToast.show(message: 'اسم صاحب المتجر مطلوب', backgroundColor: Colors.red);
@@ -144,7 +154,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     return true;
   }
 
-  // ✅ إرسال التسجيل باستخدام auth_provider المحدث
   Future<void> _submitRegistration() async {
     if (!_validateData()) return;
 
@@ -154,17 +163,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
 
     try {
       print('🚀 بدء عملية التسجيل...');
-      print('📋 البيانات:');
-      print('- الاسم: $fullName');
-      print('- المتجر: $brandName');
-      print('- المستخدم: $userName');
-      print('- الهاتف: $phoneNumber');
-      print('- الصورة: $brandImg');
-      print('- المناطق: ${selectedZones.length}');
-      print('- الإحداثيات: $latitude, $longitude');
-      print('- أقرب نقطة: $nearestLandmark');
+      print('📋 البيانات النهائية:');
+      print('   الاسم الكامل: $fullName');
+      print('   اسم المتجر: $brandName');
+      print('   اسم المستخدم: $userName');
+      print('   رقم الهاتف: $phoneNumber');
+      print('   صورة الشعار: $brandImg');
+      print('   عدد المناطق: ${selectedZones.length}');
+      print('   الإحداثيات: $latitude, $longitude');
+      print('   أقرب نقطة: $nearestLandmark');
 
-      // ✅ استخدام auth_provider المحدث
+      // ✅ استخدام auth_provider.register المحدث
       final result = await ref.read(authNotifierProvider.notifier).register(
         fullName: fullName!,
         brandName: brandName!,
@@ -180,7 +189,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
 
       if (result.$1 != null) {
         print('✅ نجح التسجيل: ${result.$1!.fullName}');
-        GlobalToast.showSuccess(message: 'تم التسجيل بنجاح! مرحباً بك في توصيل');
+        
+        // ✅ عرض رسالة نجاح
+        GlobalToast.showSuccess(
+          message: 'تم التسجيل بنجاح! مرحباً بك في توصيل',
+          durationInSeconds: 3,
+        );
+        
+        // ✅ انتظار قليل لعرض الرسالة ثم التوجه للـ Home
+        await Future.delayed(const Duration(seconds: 1));
         
         if (mounted) {
           context.go(AppRoutes.home);
@@ -190,6 +207,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
         GlobalToast.show(
           message: result.$2 ?? 'فشل في التسجيل',
           backgroundColor: Colors.red,
+          durationInSeconds: 4,
         );
       }
     } catch (e) {
@@ -197,6 +215,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
       GlobalToast.show(
         message: 'خطأ في التسجيل: ${e.toString()}',
         backgroundColor: Colors.red,
+        durationInSeconds: 4,
       );
     } finally {
       if (mounted) {
@@ -207,8 +226,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     }
   }
 
+  /// ✅ دالة التحقق من الخروج مع وجود بيانات
   Future<bool> _onWillPop() async {
-    // تحقق من وجود بيانات مدخلة
     if (fullName?.isNotEmpty == true || 
         brandName?.isNotEmpty == true ||
         userName?.isNotEmpty == true ||
@@ -265,6 +284,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
               _buildBackgroundSection(),
               _buildBottomSheetSection(),
               
+              // ✅ شاشة التحميل أثناء التسجيل
               if (_isSubmitting)
                 Container(
                   color: Colors.black.withOpacity(0.5),
@@ -280,6 +300,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
+                            fontFamily: "Tajawal",
                           ),
                         ),
                       ],
@@ -452,6 +473,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
       controller: _tabController,
       physics: const NeverScrollableScrollPhysics(),
       children: [
+        // ✅ Tab 1: معلومات الحساب
         SingleChildScrollView(
           child: UserInfoTab(
             onNext: _goToNextTab,
@@ -467,6 +489,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
           ),
         ),
         
+        // ✅ Tab 2: معلومات التوصيل
         SingleChildScrollView(
           child: Column(
             children: [
@@ -475,6 +498,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                 initialZones: selectedZones,
               ),
               
+              // ✅ أزرار التحكم النهائية
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -487,7 +511,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => _tabController.animateTo(0),
+                        onPressed: _isSubmitting ? null : () => _tabController.animateTo(0),
                         child: const Text('السابق'),
                       ),
                     ),

@@ -1,5 +1,5 @@
+// lib/Features/auth/Services/auth_service.dart
 import 'dart:async';
-
 import 'package:Tosell/Features/auth/models/User.dart';
 import 'package:Tosell/core/Client/BaseClient.dart';
 
@@ -9,6 +9,7 @@ class AuthService {
   AuthService()
       : baseClient = BaseClient<User>(fromJson: (json) => User.fromJson(json));
 
+  /// دالة تسجيل الدخول - تعمل بشكل جيد (لا تغيير)
   Future<(User? data, String? error)> login(
       {String? phoneNumber, required String password}) async {
     try {
@@ -24,56 +25,162 @@ class AuthService {
     }
   }
 
-  // ✅ تعديل دالة register لتتطابق مع API المطلوب
+  /// ✅ دالة تسجيل التاجر مع تدقيق شامل للبيانات
   Future<(User? data, String? error)> register({
     required String fullName,
     required String brandName,
     required String userName,
     required String phoneNumber,
     required String password,
-    required String brandImg,
+    required String brandImg, // ✅ يجب أن يكون URL من رفع الصورة
     required List<Map<String, dynamic>> zones,
     required int type,
   }) async {
     try {
-      print('🚀 AuthService: إرسال البيانات إلى /auth/merchant-register');
+      print('🚀 AuthService: بدء تسجيل التاجر...');
       
-      final data = {
-        'merchantId': null, // يتم توليده من الباك اند
+      // ✅ تدقيق البيانات الأساسية
+      print('📝 التحقق من البيانات الأساسية:');
+      print('   - fullName: "$fullName" ${fullName.isNotEmpty ? '✅' : '❌ فارغ'}');
+      print('   - brandName: "$brandName" ${brandName.isNotEmpty ? '✅' : '❌ فارغ'}');
+      print('   - userName: "$userName" ${userName.isNotEmpty ? '✅' : '❌ فارغ'}');
+      print('   - phoneNumber: "$phoneNumber" ${phoneNumber.isNotEmpty ? '✅' : '❌ فارغ'}');
+      print('   - password: "${password.isNotEmpty ? '***' : 'فارغ'}" ${password.isNotEmpty ? '✅' : '❌ فارغ'}');
+      
+      // ✅ تدقيق رابط الصورة (الآن سيكون URL كامل من auth_provider)
+      print('🖼️ التحقق من الصورة:');
+      print('   - brandImg: "$brandImg"');
+      print('   - الطول: ${brandImg.length} حرف');
+      
+      // ✅ التحقق من أنه URL كامل (سيكون كذلك بعد تحويل auth_provider)
+      final isValidUrl = brandImg.startsWith('https://') || brandImg.startsWith('http://');
+      
+      if (!isValidUrl) {
+        print('❌ خطأ: brandImg ليس URL كامل');
+        print('   الرابط المستلم: "$brandImg"');
+        print('   المتوقع: رابط يبدأ بـ http:// أو https://');
+        return (null, 'صورة المتجر لم يتم معالجتها بشكل صحيح');
+      }
+      
+      print('   ✅ رابط صحيح وكامل');
+      print('   🌐 النطاق: ${brandImg.contains('toseel-api.future-wave.co') ? 'موقع توصيل' : 'خارجي'}');
+
+      // ✅ تدقيق المناطق
+      print('🌍 التحقق من المناطق:');
+      print('   - عدد المناطق: ${zones.length}');
+      
+      if (zones.isEmpty) {
+        print('❌ خطأ: لا توجد مناطق');
+        return (null, 'يجب اختيار منطقة واحدة على الأقل');
+      }
+
+      for (int i = 0; i < zones.length; i++) {
+        final zone = zones[i];
+        print('   📍 المنطقة ${i + 1}:');
+        print('      - zoneId: ${zone['zoneId']} ${zone['zoneId'] != null && zone['zoneId'] > 0 ? '✅' : '❌'}');
+        print('      - nearestLandmark: "${zone['nearestLandmark']}" ${zone['nearestLandmark']?.toString().isNotEmpty == true ? '✅' : '❌'}');
+        print('      - lat: ${zone['lat']} ${zone['lat'] != null ? '✅' : '❌'}');
+        print('      - long: ${zone['long']} ${zone['long'] != null ? '✅' : '❌'}');
+        
+        // ✅ التحقق من صحة بيانات المنطقة
+        if (zone['zoneId'] == null || zone['zoneId'] <= 0) {
+          print('❌ خطأ: zoneId غير صحيح في المنطقة ${i + 1}');
+          return (null, 'معرف المنطقة غير صحيح');
+        }
+        
+        if (zone['nearestLandmark'] == null || zone['nearestLandmark'].toString().trim().isEmpty) {
+          print('❌ خطأ: nearestLandmark فارغ في المنطقة ${i + 1}');
+          return (null, 'أقرب نقطة دالة مطلوبة لكل منطقة');
+        }
+        
+        if (zone['lat'] == null || zone['long'] == null) {
+          print('❌ خطأ: إحداثيات ناقصة في المنطقة ${i + 1}');
+          return (null, 'يجب تحديد الموقع على الخريطة لكل منطقة');
+        }
+      }
+
+      // ✅ تدقيق النوع
+      print('🏷️ التحقق من النوع:');
+      print('   - type: $type');
+      if (type != 1 && type != 2) {
+        print('⚠️ تحذير: type = $type (مقبول لكن غير معتاد، المتوقع: 1 أو 2)');
+      } else {
+        print('   - المعنى: ${type == 1 ? 'مركز' : 'أطراف'} ✅');
+      }
+
+      // ✅ تحضير البيانات بالشكل المطلوب تماماً
+      final requestData = {
+        'merchantId': null, // ✅ null كما طلب
         'fullName': fullName,
         'brandName': brandName,
-        'brandImg': brandImg,
+        'brandImg': brandImg, // ✅ URL من رفع الصورة
         'userName': userName,
         'phoneNumber': phoneNumber,
-        'img': brandImg, // نفس الصورة حسب المتطلبات
-        'zones': zones,
+        'img': brandImg, // ✅ نفس brandImg كما مطلوب
+        'zones': zones, // ✅ قائمة بالشكل المطلوب
         'password': password,
-        'type': type,
+        'type': type, // ✅ نوع المنطقة
       };
 
-      print('📦 البيانات المرسلة: $data');
+      print('📤 البيانات النهائية المرسلة:');
+      print('📋 JSON كامل:');
+      print(requestData);
+      
+      // ✅ طباعة حجم البيانات للتأكد
+      print('📏 إحصائيات:');
+      print('   - حجم zones: ${zones.length} منطقة');
+      print('   - طول brandImg: ${brandImg.length} حرف');
+      print('   - طول fullName: ${fullName.length} حرف');
+      print('   - طول brandName: ${brandName.length} حرف');
 
+      // ✅ إرسال الطلب
+      print('🌐 إرسال الطلب إلى /auth/merchant-register...');
       var result = await baseClient.create(
         endpoint: '/auth/merchant-register',
-        data: data,
+        data: requestData,
       );
 
       print('📨 استجابة الباك اند:');
-      print('📊 Status Code: ${result.code}');
-      print('💬 Message: ${result.message}');
-      print('📄 Single Data: ${result.singleData}');
-      print('❌ Errors: ${result.errors}');
-
-      if (result.singleData == null) {
-        print('❌ AuthService: فشل التسجيل - ${result.message}');
-        return (null, result.message);
-      }
+      print('📊 كود الحالة: ${result.code}');
+      print('💬 الرسالة: ${result.message}');
       
-      print('✅ AuthService: نجح التسجيل');
-      return (result.getSingle, null);
+      // ✅ طباعة مفصلة للاستجابة
+      print('📋 تحليل الاستجابة:');
+      print('   - data (List): ${result.data?.length ?? 0} عنصر');
+      print('   - singleData: ${result.singleData != null ? 'موجودة' : 'غير موجودة'}');
+      print('   - pagination: ${result.pagination != null ? 'موجودة' : 'غير موجودة'}');
+      print('   - errors: ${result.errors}');
+      
+      // ✅ البحث عن بيانات المستخدم في الاستجابة
+      User? user;
+      if (result.singleData != null) {
+        user = result.singleData;
+        print('✅ تم العثور على المستخدم في singleData');
+        print('👤 بيانات المستخدم: ');
+      } else if (result.data != null && result.data!.isNotEmpty) {
+        user = result.data!.first;
+        print('✅ تم العثور على المستخدم في data[0]');
+        print('👤 بيانات المستخدم: ${user.toJson()}');
+      } else {
+        print('❌ لم يتم العثور على بيانات المستخدم في الاستجابة');
+        
+        // ✅ طباعة تفاصيل إضافية للتشخيص
+        if (result.code == 200) {
+          print('🔍 التشخيص: كود 200 لكن لا توجد بيانات مستخدم');
+          print('   - هذا يعني أن التسجيل نجح لكن الباك اند لم يرجع بيانات المستخدم');
+          print('   - ربما التاجر يحتاج موافقة إدارية أولاً؟');
+        }
+        
+        return (null, result.message ?? 'تم التسجيل بنجاح لكن لم يتم إرجاع بيانات المستخدم');
+      }
+
+      print('✅ AuthService: نجح التسجيل كاملاً - ');
+      return (user, null);
+      
     } catch (e) {
       print('💥 AuthService Exception: $e');
-      return (null, e.toString());
+      print('📍 Stack trace: ${StackTrace.current}');
+      return (null, 'خطأ في التسجيل: ${e.toString()}');
     }
   }
 }

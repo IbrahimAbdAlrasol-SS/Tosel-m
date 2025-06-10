@@ -1,3 +1,4 @@
+import 'package:Tosell/core/Client/BaseClient.dart';
 import 'package:gap/gap.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
@@ -51,7 +52,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           showBackButton: false,
           subtitle: "إليك لمحة عن نشاطك اليوم.",
           buttonWidget: CircleAvatar(
-            backgroundImage: NetworkImage(ProfileImage),
+            backgroundImage: NetworkImage(imageUrl+(user.img?? "")),
             radius: 20,
           ),
           actions: [
