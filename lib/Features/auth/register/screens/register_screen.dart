@@ -1,3 +1,5 @@
+import 'package:Tosell/Features/auth/login/providers/auth_provider.dart';
+import 'package:Tosell/Features/auth/models/User.dart';
 import 'package:gap/gap.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:flutter/material.dart';
@@ -46,7 +48,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     // ✅ مسح البيانات عند الخروج من الشاشة
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        ref.read(registrationNotifierProvider.notifier).reset();
+        ref.read(authNotifierProvider.notifier).toString();
       }
     });
     super.dispose();
@@ -59,45 +61,30 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   }
 
   Future<void> _submitRegistration() async {
-  final registrationNotifier = ref.read(registrationNotifierProvider.notifier);
-  
-  if (!registrationNotifier.validateUserInfo() || !registrationNotifier.validateZones()) {
-    final error = ref.read(registrationNotifierProvider).error;
-    if (error != null) {
-      GlobalToast.show(
-        message: error,
-        backgroundColor: Colors.red,
-      );
-    }
-    return;
+ var result = await ref.read(authNotifierProvider.notifier).rehister(
+  user: User(),
+ );
+
+ if(result.$1==null){
+  GlobalToast.show(message: result.$2??'',backgroundColor: context.colorScheme.error);
+  }else{
+  GlobalToast.show(message: ' secseed',backgroundColor: context.colorScheme.primary);
+  if(context.mounted){
+    context.go(AppRoutes.login);
   }
 
-  final success = await registrationNotifier.submitRegistration();
-  
-  if (success) {
-    GlobalToast.showSuccess(message: 'تم التسجيل بنجاح! مرحباً بك في توصيل');
-    
-    // ✅ حفظ البيانات في SharedPreferences
-    final registeredUser = ref.read(registrationNotifierProvider).registeredUser;
-    if (registeredUser != null) {
-      await SharedPreferencesHelper.saveUser(registeredUser);
-    }
-
-    if (mounted) {
-      context.go(AppRoutes.home); 
-    }
-  } else {
-    final error = ref.read(registrationNotifierProvider).error;
-    GlobalToast.show(
-      message: error ?? 'فشل في التسجيل',
-      backgroundColor: Colors.red,
-    );
   }
+
+  
+
+
+
+   
 }
 
   // ✅ دالة تأكيد الخروج
   Future<bool> _onWillPop() async {
-    final state = ref.read(registrationNotifierProvider);
+    final state = ref.read(authNotifierProvider.notifier);
     
     // إذا كانت هناك بيانات مدخلة، اعرض تأكيد
     if (state.fullName?.isNotEmpty == true || 
@@ -129,8 +116,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop(true);
-                // مسح البيانات عند تأكيد الخروج
-                ref.read(registrationNotifierProvider.notifier).reset();
               },
               style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text(
@@ -148,7 +133,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
 
   @override
   Widget build(BuildContext context) {
-    final registrationState = ref.watch(registrationNotifierProvider);
     
     return PopScope(
       canPop: false,
@@ -385,22 +369,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                       flex: 2,
                       child: Consumer(
                         builder: (context, ref, child) {
-                          final isSubmitting = ref.watch(
-                            registrationNotifierProvider.select((s) => s.isSubmitting)
-                          );
+                          ;
                           
                           return FilledButton(
                             onPressed: _submitRegistration,
-                            child: isSubmitting
-                                ? const SizedBox(
+                            child: const SizedBox(
                                     width: 20,
                                     height: 20,
                                     child: CircularProgressIndicator(
                                       color: Colors.white,
                                       strokeWidth: 2,
                                     ),
-                                  )
-                                : const Text('إنشاء الحساب'),
+                                  ),
+
+const Text('إنشاء الحساب')
                           );
                         },
                       ),

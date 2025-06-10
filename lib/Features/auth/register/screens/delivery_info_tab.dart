@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:Tosell/Features/auth/login/providers/auth_provider.dart';
+import 'package:Tosell/Features/profile/providers/zone_provider.dart';
 import 'package:Tosell/Features/profile/services/governorate_service.dart';
 import 'package:Tosell/Features/profile/services/zone_service.dart';
 import 'package:Tosell/Features/profile/models/zone.dart';
@@ -28,43 +30,53 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
   final ZoneService _zoneService = ZoneService();
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final state = ref.read(registrationNotifierProvider);
-      if (state.zones.isEmpty) {
-        ref.read(registrationNotifierProvider.notifier).addMarchentZone();
-      }
-    });
-  }
+  // void initState() {
+  //   super.initState();
+  //   WidgetsBinding.instance.addPostFrameCallback((_) {
+  //     final state = ref.read(authNotifierProvider.notifier);
+  //     if (state.zones.isEmpty) {
+  //       ref.read(registrationNotifierProvider.notifier).addMarchentZone();
+  //     }
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(registrationNotifierProvider);
+    final state = ref.watch(zoneNotifierProvider);
 
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.only(bottom: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ...state.zones.asMap().entries.map((entry) {
-              final index = entry.key;
-              return Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6),
-                child: _buildLocationCard(index, state.zones[index]),
-              );
-            }),
-            const SizedBox(height: 12),
-            _buildAddLocationButton(),
-          ],
-        ),
+        child: state.when(
+            data: (zones) => _buildUi(state, zones),
+            error: (error, _) => Center(
+                  child: Text(error.toString()),
+                ),
+            loading: () => const Center(
+                  child: CircularProgressIndicator(),
+                )),
       ),
     );
   }
 
-  Widget _buildLocationCard(int index, RegistrationZoneInfo zoneInfo) {
+  Column _buildUi(AsyncValue<List<Zone>> state, List<Zone> zones) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ...zones.asMap().entries.map((entry) {
+          final index = entry.key;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6),
+            child: _buildLocationCard(index, zones[index]),
+          );
+        }),
+        const SizedBox(height: 12),
+        _buildAddLocationButton(),
+      ],
+    );
+  }
+
+  Widget _buildLocationCard(int index, Zone zoneInfo) {
     bool isExpanded = expandedTiles.contains(index);
 
     return Card(
@@ -93,7 +105,8 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
             if (ref.watch(registrationNotifierProvider).zones.length > 1)
               IconButton(
                 onPressed: () => _removeLocation(index),
-                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                icon: const Icon(Icons.delete_outline,
+                    color: Colors.red, size: 20),
               ),
           ],
         ),
@@ -143,14 +156,16 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
         try {
           // جلب جميع المحافظات
           final governorates = await _governorateService.getAllZones();
-          
+
           // تصفية حسب البحث إذا كان موجود
           if (query.trim().isNotEmpty) {
-            return governorates.where((gov) => 
-              gov.name?.toLowerCase().contains(query.toLowerCase()) ?? false
-            ).toList();
+            return governorates
+                .where((gov) =>
+                    gov.name?.toLowerCase().contains(query.toLowerCase()) ??
+                    false)
+                .toList();
           }
-          
+
           return governorates;
         } catch (e) {
           print('Error loading governorates: $e');
@@ -192,7 +207,7 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
   /// ✅ dropdown المناطق - حل مبسط بدون selectedValue
   Widget _buildZoneDropdown(int index, RegistrationZoneInfo zoneInfo) {
     final selectedGov = zoneInfo.selectedGovernorate;
-    
+
     return RegistrationSearchDropDown<Zone>(
       label: "المنطقة",
       hint: selectedGov == null
@@ -208,17 +223,18 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
         }
 
         try {
-          print('🔍 جاري جلب المناطق للمحافظة: ${selectedGov!.name} (ID: ${selectedGov!.id})');
-          
+          print(
+              '🔍 جاري جلب المناطق للمحافظة: ${selectedGov!.name} (ID: ${selectedGov!.id})');
+
           // جلب جميع المناطق
           final allZones = await _zoneService.getAllZones();
           print('📋 تم جلب ${allZones.length} منطقة إجمالي');
-          
+
           if (allZones.isEmpty) {
             print('⚠️ لا توجد مناطق في الـ API');
             return [];
           }
-          
+
           // عرض عينة من البيانات للتأكد من الهيكل
           if (allZones.isNotEmpty) {
             final sampleZone = allZones.first;
@@ -228,19 +244,20 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
             print('   ID المحافظة: ${sampleZone.governorate?.id}');
             print('   نوع المحافظة المطلوب: ${selectedGov!.id}');
           }
-          
+
           // تصفية المناطق حسب المحافظة المختارة
           var filteredZones = allZones.where((zone) {
             final zoneGovId = zone.governorate?.id;
             final selectedGovId = selectedGov!.id;
-            
+
             print('🔍 مقارنة: $zoneGovId == $selectedGovId (${zone.name})');
-            
+
             return zoneGovId == selectedGovId;
           }).toList();
-          
-          print('🎯 تم العثور على ${filteredZones.length} منطقة للمحافظة ${selectedGov!.name}');
-          
+
+          print(
+              '🎯 تم العثور على ${filteredZones.length} منطقة للمحافظة ${selectedGov!.name}');
+
           // عرض أسماء المناطق المفلترة
           if (filteredZones.isNotEmpty) {
             print('📍 المناطق المفلترة:');
@@ -248,16 +265,19 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
               print('   - ${zone.name}');
             }
           }
-          
+
           // تصفية حسب البحث إذا كان موجود
           if (query.trim().isNotEmpty) {
             final beforeSearch = filteredZones.length;
-            filteredZones = filteredZones.where((zone) => 
-              zone.name?.toLowerCase().contains(query.toLowerCase()) ?? false
-            ).toList();
-            print('🔍 بعد البحث عن "$query": ${filteredZones.length} من $beforeSearch');
+            filteredZones = filteredZones
+                .where((zone) =>
+                    zone.name?.toLowerCase().contains(query.toLowerCase()) ??
+                    false)
+                .toList();
+            print(
+                '🔍 بعد البحث عن "$query": ${filteredZones.length} من $beforeSearch');
           }
-          
+
           return filteredZones;
         } catch (e, stackTrace) {
           print('❌ خطأ في جلب المناطق: $e');
@@ -301,8 +321,8 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
           ),
         ],
       ),
-      emptyText: selectedGov == null 
-          ? "اختر المحافظة أولاً" 
+      emptyText: selectedGov == null
+          ? "اختر المحافظة أولاً"
           : "لا توجد مناطق لهذه المحافظة",
       errorText: "خطأ في تحميل المناطق",
       enableRefresh: true,
@@ -323,7 +343,7 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
     );
   }
 
-  Widget _buildLocationPicker(int index, RegistrationZoneInfo zoneInfo) {
+  Widget _buildLocationPicker(int index, zo zoneInfo) {
     final hasLocation = zoneInfo.latitude != null && zoneInfo.longitude != null;
 
     return Column(

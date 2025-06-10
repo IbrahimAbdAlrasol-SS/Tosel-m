@@ -14,6 +14,7 @@ class User {
   String? id;
   bool? deleted;
   String? creationDate;
+  String? password;
 
   User(
       {this.token,
@@ -27,6 +28,7 @@ class User {
       this.type,
       this.id,
       this.deleted,
+      this.password,
       this.creationDate});
 
   User.fromJson(Map<String, dynamic> json) {
@@ -41,6 +43,7 @@ class User {
     deleted = json['deleted'];
     creationDate = json['creationDate'];
     img = json['img'];
+
   }
 
   Map<String, dynamic> toJson() {
@@ -53,6 +56,7 @@ class User {
       data['role'] = this.role!.toJson();
     }
     data['zone'] = this.zone;
+    data['password'] = this.password;
     data['branch'] = this.branch;
     data['type'] = this.type;
     data['id'] = this.id;

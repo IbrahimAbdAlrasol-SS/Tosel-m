@@ -73,7 +73,6 @@ class ZoneService {
       
       print('🎯 تم العثور على ${filteredZones.length} منطقة للمحافظة');
       
-      // تصفية حسب البحث إذا كان موجود
       if (query != null && query.trim().isNotEmpty) {
         final beforeSearch = filteredZones.length;
         filteredZones = filteredZones.where((zone) => 

@@ -10,6 +10,30 @@ part 'auth_provider.g.dart';
 class authNotifier extends _$authNotifier {
   final AuthService _service = AuthService();
 
+
+ Future<(User? data, String? error)> rehister({
+ required User user,
+  }) async {
+      state = const AsyncValue.loading();
+      final (result, error) = await _service.register(
+        // phoneNumber: user.phoneNumber!,
+        // password: user.password,
+        // userName: user.userName!,
+        // img: user.image,
+        // address: user.address,
+        // lat: user.lat,
+        // long: user.long,
+        // isAdmin: user.isAdmin,
+        // isVerified: user.isVerified,
+        user:user,
+      );
+     
+
+      return (user, error);
+
+
+    
+  }
   Future<(User? data, String? error)> login({
      String? phonNumber,
     required String passWord,

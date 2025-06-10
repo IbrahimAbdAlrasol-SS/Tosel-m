@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:Tosell/Features/auth/models/User.dart';
 import 'package:Tosell/core/Client/BaseClient.dart';
 
@@ -23,32 +25,33 @@ class AuthService {
   }
 
   Future<(User? data, String? error)> register({
-    required String fullName,
-    required String brandName,
-    required String userName,
-    required String phoneNumber,
-    required String password,
-    required String brandImg,
-    required List<Map<String, dynamic>> zones,
-    required int type,
+    // required String fullName,
+    // required String brandName,
+    // required String userName,
+    // required String phoneNumber,
+    // required String password,
+    // required String brandImg,
+    required User user,
+    required List<Zone> zones,
+
   }) async {
     try {
-      final data = {
-        'merchantId': null, // يتم توليده من الباك اند
-        'fullName': fullName,
-        'brandName': brandName,
-        'brandImg': brandImg,
-        'userName': userName,
-        'phoneNumber': phoneNumber,
-        'img': brandImg, // نفس الصورة حسب التوضيح
-        'zones': zones,
-        'password': password,
-        'type': type,
-      };
+      // final data = {
+      //   'merchantId': null, // يتم توليده من الباك اند
+      //   'fullName': fullName,
+      //   'brandName': brandName,
+      //   'brandImg': brandImg,
+      //   'userName': userName,
+      //   'phoneNumber': phoneNumber,
+      //   'img': brandImg, // نفس الصورة حسب التوضيح
+      //   'zones': zones,
+      //   'password': password,
+      //   'type': type,
+      // };
 
       var result = await baseClient.create(
         endpoint: '/auth/merchant-register',
-        data: data,
+        data: {...user.toJson(), 'zones': zones},
       );
 
       if (result.singleData == null) return (null, result.message);
