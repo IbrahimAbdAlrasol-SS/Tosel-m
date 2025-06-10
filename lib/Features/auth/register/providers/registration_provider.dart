@@ -6,32 +6,32 @@ import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:Tosell/Features/auth/Services/Auth_service.dart';
 import 'package:Tosell/core/Client/BaseClient.dart';
+import 'package:Tosell/Features/auth/models/User.dart'; // ✅ إضافة هذا الـ import
 
 part 'registration_provider.g.dart';
 
-/// حالة التسجيل
 class RegistrationState {
-  // معلومات المستخدم
   final String? fullName;
   final String? brandName;
   final String? userName;
   final String? phoneNumber;
   final String? password;
   final String? confirmPassword;
-  
+
   // الصورة
   final XFile? brandImage;
   final String? uploadedImageUrl;
   final bool isUploadingImage;
-  
+
   // المناطق
   final List<RegistrationZoneInfo> zones;
   final List<Zone> availableZones;
   final bool isLoadingZones;
-  
+
   // حالة التسجيل
   final bool isSubmitting;
   final String? error;
+  final User? registeredUser;
 
   const RegistrationState({
     this.fullName,
@@ -48,6 +48,7 @@ class RegistrationState {
     this.isLoadingZones = false,
     this.isSubmitting = false,
     this.error,
+    this.registeredUser, // ✅ إضافة هذا السطر
   });
 
   RegistrationState copyWith({
@@ -65,6 +66,7 @@ class RegistrationState {
     bool? isLoadingZones,
     bool? isSubmitting,
     String? error,
+    User? registeredUser, // ✅ إضافة هذا السطر
     int? type,
   }) {
     return RegistrationState(
@@ -82,6 +84,7 @@ class RegistrationState {
       isLoadingZones: isLoadingZones ?? this.isLoadingZones,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       error: error ?? this.error,
+      registeredUser: registeredUser ?? this.registeredUser,
     );
   }
 }
@@ -196,7 +199,7 @@ class RegistrationNotifier extends _$RegistrationNotifier {
 
   void addMarchentZone() {
     final newZones = List<RegistrationZoneInfo>.from(state.zones)
-    ..add(RegistrationZoneInfo());
+      ..add(RegistrationZoneInfo());
     state = state.copyWith(zones: newZones);
   }
 
@@ -211,7 +214,8 @@ class RegistrationNotifier extends _$RegistrationNotifier {
   void removeZone(int index) {
     if (index >= state.zones.length || state.zones.length <= 1) return;
 
-    final newZones = List<RegistrationZoneInfo>.from(state.zones)..removeAt(index);
+    final newZones = List<RegistrationZoneInfo>.from(state.zones)
+      ..removeAt(index);
     state = state.copyWith(zones: newZones);
   }
 
@@ -220,7 +224,7 @@ class RegistrationNotifier extends _$RegistrationNotifier {
 
     try {
       final zones = await _zoneService.getAllZones();
-      
+
       state = state.copyWith(
         availableZones: [],
         isLoadingZones: false,
@@ -285,6 +289,8 @@ class RegistrationNotifier extends _$RegistrationNotifier {
     return true;
   }
 
+  // في registration_provider.dart - دالة submitRegistration
+
   Future<bool> submitRegistration() async {
     if (!validateUserInfo() || !validateZones()) {
       return false;
@@ -299,8 +305,7 @@ class RegistrationNotifier extends _$RegistrationNotifier {
 
     try {
       final zonesData = state.zones.map((z) => z.toJson()).toList();
-      
-      final  firstZoneType = state.zones.first.selectedZone?.type ?? 1;
+      final firstZoneType = state.zones.first.selectedZone?.type ?? 1;
 
       final (user, error) = await _authService.register(
         fullName: state.fullName!,
@@ -314,7 +319,10 @@ class RegistrationNotifier extends _$RegistrationNotifier {
       );
 
       if (user != null) {
-        state = state.copyWith(isSubmitting: false);
+        state = state.copyWith(
+          isSubmitting: false,
+          registeredUser: user,
+        );
         return true;
       } else {
         state = state.copyWith(
@@ -335,6 +343,7 @@ class RegistrationNotifier extends _$RegistrationNotifier {
   void reset() {
     state = const RegistrationState();
   }
+
   void addNewZone() {
     final newZones = List<RegistrationZoneInfo>.from(state.zones)
       ..add(RegistrationZoneInfo());

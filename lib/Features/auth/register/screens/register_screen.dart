@@ -59,40 +59,41 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   }
 
   Future<void> _submitRegistration() async {
-    final registrationNotifier = ref.read(registrationNotifierProvider.notifier);
-    
-    if (!registrationNotifier.validateUserInfo() || !registrationNotifier.validateZones()) {
-      final error = ref.read(registrationNotifierProvider).error;
-      if (error != null) {
-        GlobalToast.show(
-          message: error,
-          backgroundColor: Colors.red,
-        );
-      }
-      return;
-    }
-
-    final success = await registrationNotifier.submitRegistration();
-    
-    if (success) {
-      GlobalToast.showSuccess(message: 'تم التسجيل بنجاح! مرحباً بك في توصيل');
-      // ✅ حفظ البيانات في SharedPreferences
-
-      
-    
-      if (mounted) {
-        context.go(AppRoutes.login);
-      }
-    }
-    
-    else {
-      final error = ref.read(registrationNotifierProvider).error;
+  final registrationNotifier = ref.read(registrationNotifierProvider.notifier);
+  
+  if (!registrationNotifier.validateUserInfo() || !registrationNotifier.validateZones()) {
+    final error = ref.read(registrationNotifierProvider).error;
+    if (error != null) {
       GlobalToast.show(
-        message: error ?? 'فشل في التسجيل',
+        message: error,
         backgroundColor: Colors.red,
       );
     }
+    return;
   }
+
+  final success = await registrationNotifier.submitRegistration();
+  
+  if (success) {
+    GlobalToast.showSuccess(message: 'تم التسجيل بنجاح! مرحباً بك في توصيل');
+    
+    // ✅ حفظ البيانات في SharedPreferences
+    final registeredUser = ref.read(registrationNotifierProvider).registeredUser;
+    if (registeredUser != null) {
+      await SharedPreferencesHelper.saveUser(registeredUser);
+    }
+
+    if (mounted) {
+      context.go(AppRoutes.home); 
+    }
+  } else {
+    final error = ref.read(registrationNotifierProvider).error;
+    GlobalToast.show(
+      message: error ?? 'فشل في التسجيل',
+      backgroundColor: Colors.red,
+    );
+  }
+}
 
   // ✅ دالة تأكيد الخروج
   Future<bool> _onWillPop() async {
@@ -354,11 +355,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
       controller: _tabController,
       physics: const NeverScrollableScrollPhysics(),
       children: [
-        SingleChildScrollView(  // ✅ إضافة scroll منفصل لكل tab
+        SingleChildScrollView( 
           child: UserInfoTab(onNext: _goToNextTab),
         ),
         
-        SingleChildScrollView(  // ✅ إضافة scroll منفصل لكل tab
+        SingleChildScrollView(  
           child: Column(
             children: [
               DeliveryInfoTab(),
