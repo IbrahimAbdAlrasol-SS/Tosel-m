@@ -25,7 +25,7 @@ class AuthService {
     }
   }
 
-  /// ✅ دالة تسجيل التاجر مع تدقيق شامل للبيانات
+  /// ✅ دالة تسجيل التاجر مع التعامل الصحيح مع الاستجابة
   Future<(User? data, String? error)> register({
     required String fullName,
     required String brandName,
@@ -47,12 +47,12 @@ class AuthService {
       print('   - phoneNumber: "$phoneNumber" ${phoneNumber.isNotEmpty ? '✅' : '❌ فارغ'}');
       print('   - password: "${password.isNotEmpty ? '***' : 'فارغ'}" ${password.isNotEmpty ? '✅' : '❌ فارغ'}');
       
-      // ✅ تدقيق رابط الصورة (الآن سيكون URL كامل من auth_provider)
+      // ✅ تدقيق رابط الصورة
       print('🖼️ التحقق من الصورة:');
       print('   - brandImg: "$brandImg"');
       print('   - الطول: ${brandImg.length} حرف');
       
-      // ✅ التحقق من أنه URL كامل (سيكون كذلك بعد تحويل auth_provider)
+      // ✅ التحقق من أنه URL كامل
       final isValidUrl = brandImg.startsWith('https://') || brandImg.startsWith('http://');
       
       if (!isValidUrl) {
@@ -150,32 +150,37 @@ class AuthService {
       print('   - singleData: ${result.singleData != null ? 'موجودة' : 'غير موجودة'}');
       print('   - pagination: ${result.pagination != null ? 'موجودة' : 'غير موجودة'}');
       print('   - errors: ${result.errors}');
+
+      // ✅ التعامل الصحيح مع الاستجابة
+      if (result.code == 200 && result.message == "Operation successful") {
+        print('✅ AuthService: تم التسجيل بنجاح - في انتظار التفعيل الإداري');
+        
+        // ✅ إرجاع حالة خاصة للتمييز
+        return (null, "REGISTRATION_SUCCESS_PENDING_APPROVAL");
+      }
       
-      // ✅ البحث عن بيانات المستخدم في الاستجابة
+      // ✅ البحث عن بيانات المستخدم في الاستجابة (في حالة وجودها)
       User? user;
       if (result.singleData != null) {
         user = result.singleData;
         print('✅ تم العثور على المستخدم في singleData');
-        print('👤 بيانات المستخدم: ');
+        print('👤 بيانات المستخدم:');
+        
+        print('✅ AuthService: نجح التسجيل كاملاً - ');
+        return (user, null);
+        
       } else if (result.data != null && result.data!.isNotEmpty) {
         user = result.data!.first;
         print('✅ تم العثور على المستخدم في data[0]');
         print('👤 بيانات المستخدم: ${user.toJson()}');
-      } else {
-        print('❌ لم يتم العثور على بيانات المستخدم في الاستجابة');
         
-        // ✅ طباعة تفاصيل إضافية للتشخيص
-        if (result.code == 200) {
-          print('🔍 التشخيص: كود 200 لكن لا توجد بيانات مستخدم');
-          print('   - هذا يعني أن التسجيل نجح لكن الباك اند لم يرجع بيانات المستخدم');
-          print('   - ربما التاجر يحتاج موافقة إدارية أولاً؟');
-        }
-        
-        return (null, result.message ?? 'تم التسجيل بنجاح لكن لم يتم إرجاع بيانات المستخدم');
+        print('✅ AuthService: نجح التسجيل كاملاً - ${user.fullName}');
+        return (user, null);
       }
 
-      print('✅ AuthService: نجح التسجيل كاملاً - ');
-      return (user, null);
+      // ✅ حالة أخرى: رسالة من الباك اند
+      print('⚠️ AuthService: استجابة غير متوقعة');
+      return (null, result.message ?? 'استجابة غير متوقعة من الخادم');
       
     } catch (e) {
       print('💥 AuthService Exception: $e');

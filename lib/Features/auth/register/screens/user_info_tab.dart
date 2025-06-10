@@ -36,8 +36,7 @@ class UserInfoTab extends ConsumerStatefulWidget {
 
 class _UserInfoTabState extends ConsumerState<UserInfoTab> {
   final _formKey = GlobalKey<FormState>();
-  
-  // ✅ Controllers للنصوص
+
   final _fullNameController = TextEditingController();
   final _brandNameController = TextEditingController();
   final _userNameController = TextEditingController();
@@ -45,7 +44,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  // ✅ Focus nodes للتنقل بين الحقول
   final _fullNameFocus = FocusNode();
   final _brandNameFocus = FocusNode();
   final _userNameFocus = FocusNode();
@@ -53,7 +51,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
   final _passwordFocus = FocusNode();
   final _confirmPasswordFocus = FocusNode();
 
-  // ✅ متغيرات حالة الصورة وكلمات المرور
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   XFile? _brandImage;
@@ -77,7 +74,7 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    
+
     _fullNameFocus.dispose();
     _brandNameFocus.dispose();
     _userNameFocus.dispose();
@@ -87,7 +84,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
     super.dispose();
   }
 
-  /// ✅ تحميل البيانات الأولية إذا كانت موجودة
   void _loadInitialData() {
     _fullNameController.text = widget.initialData['fullName'] ?? '';
     _brandNameController.text = widget.initialData['brandName'] ?? '';
@@ -97,7 +93,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
     _uploadedImageUrl = widget.initialData['brandImg'];
   }
 
-  /// ✅ دالة اختيار الصورة ورفعها
   Future<void> _pickAndUploadImage() async {
     try {
       final XFile? image = await ImagePicker().pickImage(
@@ -113,21 +108,16 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
           _isUploadingImage = true;
         });
 
-        print('🖼️ بدء رفع الصورة: ${image.name}');
-        
-        // ✅ رفع الصورة باستخدام BaseClient
         final result = await _baseClient.uploadFile(image.path);
-        
+
         if (result.data != null && result.data!.isNotEmpty) {
           setState(() {
             _uploadedImageUrl = result.data!.first;
             _isUploadingImage = false;
           });
-          
-          print('✅ تم رفع الصورة بنجاح: $_uploadedImageUrl');
+
           GlobalToast.showSuccess(message: 'تم رفع الصورة بنجاح');
-          
-          // ✅ تحديث البيانات في الـ parent
+
           _saveCurrentData();
         } else {
           throw Exception('فشل في رفع الصورة');
@@ -138,8 +128,7 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
         _isUploadingImage = false;
         _brandImage = null;
       });
-      
-      print('❌ خطأ في رفع الصورة: $e');
+
       GlobalToast.show(
         message: 'فشل في رفع الصورة: ${e.toString()}',
         backgroundColor: Colors.red,
@@ -147,7 +136,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
     }
   }
 
-  /// ✅ حفظ البيانات الحالية وإرسالها للـ parent
   void _saveCurrentData() {
     widget.onUserInfoChanged(
       fullName: _fullNameController.text.trim(),
@@ -159,15 +147,9 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
     );
   }
 
-  /// ✅ دالة التحقق والانتقال للخطوة التالية
   Future<void> _handleNext() async {
-    // ✅ حفظ البيانات أولاً
     _saveCurrentData();
-
-    // ✅ التحقق من صحة النموذج
     if (!_formKey.currentState!.validate()) return;
-
-    // ✅ التحقق من رفع الصورة
     if (_uploadedImageUrl == null) {
       GlobalToast.show(
         message: 'يجب رفع صورة المتجر أولاً',
@@ -175,8 +157,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
       );
       return;
     }
-
-    // ✅ التحقق من تطابق كلمات المرور
     if (_passwordController.text != _confirmPasswordController.text) {
       GlobalToast.show(
         message: 'كلمة المرور غير متطابقة',
@@ -184,8 +164,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
       );
       return;
     }
-
-    print('✅ تم التحقق من بيانات المستخدم بنجاح');
     widget.onNext?.call();
   }
 
@@ -197,7 +175,6 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
         key: _formKey,
         child: Column(
           children: [
-            // ✅ حقل اسم صاحب المتجر
             CustomTextFormField(
               controller: _fullNameController,
               focusNode: _fullNameFocus,
@@ -213,17 +190,16 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
                 ),
               ),
               validator: (value) {
-                if (value?.trim().isEmpty ?? true) return "اسم صاحب المتجر مطلوب";
-                if (value!.trim().length < 2) return "اسم صاحب المتجر قصير جداً";
+                if (value?.trim().isEmpty ?? true)
+                  return "اسم صاحب المتجر مطلوب";
+                if (value!.trim().length < 2)
+                  return "اسم صاحب المتجر قصير جداً";
                 return null;
               },
               onChanged: (value) => _saveCurrentData(),
               onFieldSubmitted: (_) => _brandNameFocus.requestFocus(),
             ),
-            
             const Gap(5),
-            
-            // ✅ حقل اسم المتجر
             CustomTextFormField(
               controller: _brandNameController,
               focusNode: _brandNameFocus,
@@ -244,10 +220,7 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
               onChanged: (value) => _saveCurrentData(),
               onFieldSubmitted: (_) => _userNameFocus.requestFocus(),
             ),
-            
             const Gap(5),
-            
-            // ✅ حقل اسم المستخدم
             CustomTextFormField(
               controller: _userNameController,
               focusNode: _userNameFocus,
@@ -263,18 +236,15 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
               validator: (value) {
                 if (value?.trim().isEmpty ?? true) return "اسم المستخدم مطلوب";
                 if (value!.trim().length < 3) return "اسم المستخدم قصير جداً";
-                // ✅ التحقق من وجود أحرف وليس رموز فقط
-                final hasLetters = RegExp(r'[a-zA-Z\u0600-\u06FF]').hasMatch(value);
+                final hasLetters =
+                    RegExp(r'[a-zA-Z\u0600-\u06FF]').hasMatch(value);
                 if (!hasLetters) return "اسم المستخدم يجب أن يحتوي على أحرف";
                 return null;
               },
               onChanged: (value) => _saveCurrentData(),
               onFieldSubmitted: (_) => _phoneFocus.requestFocus(),
             ),
-            
             const Gap(5),
-            
-            // ✅ حقل رقم الهاتف
             CustomTextFormField(
               controller: _phoneController,
               focusNode: _phoneFocus,
@@ -299,14 +269,13 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
               onChanged: (value) => _saveCurrentData(),
               onFieldSubmitted: (_) => _passwordFocus.requestFocus(),
             ),
-            
             const Gap(5),
-            
-            // ✅ حقل رفع الصورة
             CustomTextFormField(
               readOnly: true,
               label: "شعار / صورة المتجر",
-              hint: _brandImage?.name ?? _uploadedImageUrl?.split('/').last ?? "أضغط هنا",
+              hint: _brandImage?.name ??
+                  _uploadedImageUrl?.split('/').last ??
+                  "أضغط هنا",
               validator: (value) {
                 if (_uploadedImageUrl == null) return "صورة المتجر مطلوبة";
                 return null;
@@ -347,10 +316,7 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
                 ),
               ),
             ),
-            
             const Gap(5),
-            
-            // ✅ حقل كلمة المرور
             CustomTextFormField(
               controller: _passwordController,
               focusNode: _passwordFocus,
@@ -367,26 +333,25 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
               suffixInner: Padding(
                 padding: const EdgeInsets.all(10.0),
                 child: GestureDetector(
-                  onTap: () => setState(() => _obscurePassword = !_obscurePassword),
+                  onTap: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                   child: SvgPicture.asset(
                     _obscurePassword
                         ? "assets/svg/10. EyeSlash.svg"
-                        : "assets/svg/10. EyeSlash.svg", 
+                        : "assets/svg/10. EyeSlash.svg",
                   ),
                 ),
               ),
               validator: (value) {
                 if (value?.isEmpty ?? true) return "كلمة المرور مطلوبة";
-                if (value!.length < 6) return "كلمة المرور قصيرة جداً (6 أحرف على الأقل)";
+                if (value!.length < 6)
+                  return "كلمة المرور قصيرة جداً (6 أحرف على الأقل)";
                 return null;
               },
               onChanged: (value) => _saveCurrentData(),
               onFieldSubmitted: (_) => _confirmPasswordFocus.requestFocus(),
             ),
-            
             const Gap(5),
-            
-            // ✅ حقل تأكيد كلمة المرور
             CustomTextFormField(
               controller: _confirmPasswordController,
               focusNode: _confirmPasswordFocus,
@@ -403,7 +368,8 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
               suffixInner: Padding(
                 padding: const EdgeInsets.all(10.0),
                 child: GestureDetector(
-                  onTap: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                  onTap: () => setState(
+                      () => _obscureConfirmPassword = !_obscureConfirmPassword),
                   child: SvgPicture.asset(
                     _obscureConfirmPassword
                         ? "assets/svg/10. EyeSlash.svg"
@@ -413,16 +379,14 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
               ),
               validator: (value) {
                 if (value?.isEmpty ?? true) return "تأكيد كلمة المرور مطلوب";
-                if (value != _passwordController.text) return "كلمة المرور غير متطابقة";
+                if (value != _passwordController.text)
+                  return "كلمة المرور غير متطابقة";
                 return null;
               },
               onChanged: (value) => _saveCurrentData(),
               onFieldSubmitted: (_) => _handleNext(),
             ),
-            
-            const Gap(50),
-            
-            // ✅ أزرار التحكم في الأسفل
+            const Gap(10),
             Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: Column(
@@ -437,9 +401,7 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
                       onPressed: _handleNext,
                     ),
                   ),
-                  
                   const Gap(20),
-                  
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -455,7 +417,7 @@ class _UserInfoTabState extends ConsumerState<UserInfoTab> {
                         child: Text(
                           "تسجيل الدخول",
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSecondary,
+                            color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

@@ -132,9 +132,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
             // Login Form Sheet
             DraggableScrollableSheet(
-              initialChildSize: 0.66,
-              minChildSize: 0.66,
-              maxChildSize: 0.66,
+              initialChildSize: 0.58,
+              minChildSize: 0.58,
+              maxChildSize: 0.58,
               builder: (context, scrollController) {
                 return Material(
                   color: Colors.transparent,

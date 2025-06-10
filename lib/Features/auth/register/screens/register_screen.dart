@@ -29,7 +29,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   int _currentIndex = 0;
   bool _isSubmitting = false;
 
-  // ✅ بيانات المستخدم
   String? fullName;
   String? brandName;
   String? userName;
@@ -37,7 +36,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   String? password;
   String? brandImg;
 
-  // ✅ بيانات المناطق مع الإحداثيات
   List<Zone> selectedZones = [];
   double? latitude;
   double? longitude;
@@ -187,22 +185,35 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
         nearestLandmark: nearestLandmark,
       );
 
-      if (result.$1 != null) {
-        print('✅ نجح التسجيل: ${result.$1!.fullName}');
+      if (result.$2 == "REGISTRATION_SUCCESS_PENDING_APPROVAL") {
+        // ✅ تم التسجيل بنجاح - في انتظار الموافقة الإدارية
         
-        // ✅ عرض رسالة نجاح
+        
+        await Future.delayed(const Duration(seconds: 3));
+        
+        if (mounted) {
+          context.go(AppRoutes.login);
+        }
+        
+      } else if (result.$1 != null) {
+        // ✅ حالة مثالية: تم التسجيل والحصول على بيانات المستخدم مباشرة
+        print('✅ نجح التسجيل مع بيانات المستخدم: ${result.$1!.fullName}');
+        
+        await SharedPreferencesHelper.saveUser(result.$1!);
+        
         GlobalToast.showSuccess(
-          message: 'تم التسجيل بنجاح! مرحباً بك في توصيل',
+          message: 'مرحباً بك في توصيل! تم تفعيل حسابك بنجاح',
           durationInSeconds: 3,
         );
         
-        // ✅ انتظار قليل لعرض الرسالة ثم التوجه للـ Home
         await Future.delayed(const Duration(seconds: 1));
         
         if (mounted) {
           context.go(AppRoutes.home);
         }
+        
       } else {
+        // ❌ خطأ حقيقي في التسجيل
         print('❌ فشل التسجيل: ${result.$2}');
         GlobalToast.show(
           message: result.$2 ?? 'فشل في التسجيل',
@@ -210,6 +221,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
           durationInSeconds: 4,
         );
       }
+      
     } catch (e) {
       print('💥 خطأ في التسجيل: $e');
       GlobalToast.show(
@@ -303,6 +315,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                             fontFamily: "Tajawal",
                           ),
                         ),
+                        Gap(8),
+                        Text(
+                          'يرجى الانتظار لحظات',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                            fontFamily: "Tajawal",
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -325,7 +346,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                 const Gap(25),
                 CustomAppBar(
                   titleWidget: Text(
-                    'إنشاء حساب',
+                    'تسجيل دخول',
                     style: context.textTheme.bodyMedium!.copyWith(
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
@@ -391,9 +412,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
 
   Widget _buildBottomSheetSection() {
     return DraggableScrollableSheet(
-      initialChildSize: 0.69,
-      minChildSize: 0.69,
-      maxChildSize: 0.9,
+      initialChildSize: 0.6,
+      minChildSize: 0.6,
+      maxChildSize: 0.7,
       builder: (context, scrollController) {
         return Container(
           decoration: const BoxDecoration(
@@ -406,9 +427,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Gap(5),
               _buildTabBar(),
               Expanded(
+                
                 child: _buildTabBarView(),
               ),
             ],
@@ -448,7 +469,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),
-                const SizedBox(height: 6),
+                const Gap(5),
                 Text(
                   label,
                   style: TextStyle(
@@ -473,7 +494,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
       controller: _tabController,
       physics: const NeverScrollableScrollPhysics(),
       children: [
-        // ✅ Tab 1: معلومات الحساب
         SingleChildScrollView(
           child: UserInfoTab(
             onNext: _goToNextTab,
@@ -489,7 +509,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
           ),
         ),
         
-        // ✅ Tab 2: معلومات التوصيل
         SingleChildScrollView(
           child: Column(
             children: [
@@ -498,7 +517,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                 initialZones: selectedZones,
               ),
               
-              // ✅ أزرار التحكم النهائية
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(

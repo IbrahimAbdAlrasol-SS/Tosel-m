@@ -27,7 +27,7 @@ class authNotifier extends _$authNotifier {
     }
   }
 
-  /// ✅ دالة تسجيل التاجر مع إصلاح URL الصورة
+  /// ✅ دالة تسجيل التاجر مع إصلاح URL الصورة والتعامل مع حالة الموافقة الإدارية
   Future<(User? data, String? error)> register({
     required String fullName,
     required String brandName,
@@ -176,13 +176,21 @@ class authNotifier extends _$authNotifier {
         type: firstZoneType,
       );
 
+      // ✅ التعامل مع الحالات المختلفة
+      if (error == "REGISTRATION_SUCCESS_PENDING_APPROVAL") {
+        // ✅ تسجيل ناجح لكن يحتاج موافقة إدارية
+        print('✅ AuthProvider: تم التسجيل بنجاح - في انتظار الموافقة الإدارية');
+        state = const AsyncValue.data(null);
+        return (null, "REGISTRATION_SUCCESS_PENDING_APPROVAL");
+      }
+
       if (user == null) {
         state = const AsyncValue.data(null);
         print('❌ AuthProvider: فشل التسجيل - $error');
         return (null, error);
       }
 
-      // ✅ حفظ بيانات المستخدم محلياً بعد نجاح التسجيل
+      // ✅ حالة مثالية: حفظ بيانات المستخدم محلياً بعد نجاح التسجيل
       print('✅ AuthProvider: نجح التسجيل كاملاً - ${user.fullName}');
       await SharedPreferencesHelper.saveUser(user);
       state = AsyncValue.data(user);
@@ -194,7 +202,10 @@ class authNotifier extends _$authNotifier {
       state = AsyncValue.error(e, stackTrace);
       return (null, 'خطأ غير متوقع: ${e.toString()}');
     }
-  }  Future<(User? data, String? error)> login({
+  }
+
+  /// ✅ دالة تسجيل الدخول (بدون تغيير)
+  Future<(User? data, String? error)> login({
     String? phonNumber,
     required String passWord,
   }) async {

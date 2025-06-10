@@ -14,7 +14,6 @@ import 'package:Tosell/core/widgets/CustomTextFormField.dart';
 import 'package:Tosell/core/widgets/custom_search_drop_down.dart';
 import 'package:Tosell/core/router/app_router.dart';
 
-// ✅ نموذج بسيط لمعلومات المنطقة مع الإحداثيات
 class ZoneLocationInfo {
   Governorate? selectedGovernorate;
   Zone? selectedZone;
@@ -46,12 +45,11 @@ class ZoneLocationInfo {
     );
   }
 
-  // ✅ تحويل إلى Zone كامل للإرسال
   Zone? toZone() {
     if (selectedZone == null) {
       return null;
     }
-    
+
     return Zone(
       id: selectedZone!.id,
       name: selectedZone!.name,
@@ -90,23 +88,22 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
   Set<int> expandedTiles = {};
   final GovernorateService _governorateService = GovernorateService();
   final ZoneService _zoneService = ZoneService();
-  
-  // ✅ قائمة المناطق المحلية مع الإحداثيات
+
   List<ZoneLocationInfo> zones = [];
 
   @override
   void initState() {
     super.initState();
-    
-    // ✅ تحميل البيانات الأولية أو إضافة منطقة فارغة
+
     if (widget.initialZones.isNotEmpty) {
-      zones = widget.initialZones.map((zone) => ZoneLocationInfo(selectedZone: zone)).toList();
+      zones = widget.initialZones
+          .map((zone) => ZoneLocationInfo(selectedZone: zone))
+          .toList();
     } else {
       zones = [ZoneLocationInfo()];
     }
   }
 
-  // ✅ تحديث المناطق في الـ parent مع الإحداثيات
   void _updateParent() {
     final validZones = zones
         .where((zone) => zone.selectedZone != null)
@@ -114,13 +111,10 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
         .where((zone) => zone != null)
         .cast<Zone>()
         .toList();
-    
-    // ✅ أخذ الإحداثيات من أول منطقة صالحة
-    final firstValidZone = zones.firstWhere(
-      (zone) => zone.isValid, 
-      orElse: () => ZoneLocationInfo()
-    );
-    
+
+    final firstValidZone = zones.firstWhere((zone) => zone.isValid,
+        orElse: () => ZoneLocationInfo());
+
     widget.onZonesChangedWithLocation(
       zones: validZones,
       latitude: firstValidZone.latitude,
@@ -140,11 +134,12 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
             ...zones.asMap().entries.map((entry) {
               final index = entry.key;
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6),
                 child: _buildLocationCard(index, zones[index]),
               );
             }),
-            const SizedBox(height: 12),
+            const Gap(5),
             _buildAddLocationButton(),
           ],
         ),
@@ -181,7 +176,8 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
             if (zones.length > 1)
               IconButton(
                 onPressed: () => _removeLocation(index),
-                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                icon: const Icon(Icons.delete_outline,
+                    color: Colors.red, size: 20),
               ),
           ],
         ),
@@ -229,7 +225,7 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
       asyncItems: (query) async {
         try {
           final governorates = await _governorateService.getAllZones();
-          
+
           if (query.trim().isNotEmpty) {
             return governorates
                 .where((gov) =>
@@ -237,7 +233,7 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
                     false)
                 .toList();
           }
-          
+
           return governorates;
         } catch (e) {
           print('Error loading governorates: $e');
@@ -292,7 +288,7 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
 
         try {
           final allZones = await _zoneService.getAllZones();
-          
+
           if (allZones.isEmpty) {
             return [];
           }
@@ -387,7 +383,6 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
               ),
         ),
         const Gap(5),
-
         InkWell(
           onTap: () => _openLocationPicker(index, zoneInfo),
           borderRadius: BorderRadius.circular(16),
@@ -440,37 +435,6 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
             ),
           ),
         ),
-
-        // عرض الإحداثيات
-        if (hasLocation) ...[
-          const Gap(5),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: context.colorScheme.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: context.colorScheme.primary.withOpacity(0.3),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.location_on,
-                    color: context.colorScheme.primary, size: 16),
-                const Gap(8),
-                Expanded(
-                  child: Text(
-                    'خط العرض: ${zoneInfo.latitude?.toStringAsFixed(4)} | خط الطول: ${zoneInfo.longitude?.toStringAsFixed(4)}',
-                    style: context.textTheme.bodySmall?.copyWith(
-                      color: context.colorScheme.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ],
     );
   }
@@ -535,8 +499,7 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
     _updateParent();
   }
 
-  Future<void> _openLocationPicker(
-      int index, ZoneLocationInfo zoneInfo) async {
+  Future<void> _openLocationPicker(int index, ZoneLocationInfo zoneInfo) async {
     try {
       final result = await context.push(
         AppRoutes.mapSelection,
