@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:Tosell/core/constants/spaces.dart';
 import 'package:Tosell/core/utils/extensions.dart';
+
 class RegistrationSearchDropDown<T> extends StatefulWidget {
   final String label;
   final String hint;
@@ -30,9 +31,12 @@ class RegistrationSearchDropDown<T> extends StatefulWidget {
     this.enableRefresh = true,
   });
   @override
-  State<RegistrationSearchDropDown<T>> createState() => _RegistrationSearchDropDownState<T>();
+  State<RegistrationSearchDropDown<T>> createState() =>
+      _RegistrationSearchDropDownState<T>();
 }
-class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDown<T>>
+
+class _RegistrationSearchDropDownState<T>
+    extends State<RegistrationSearchDropDown<T>>
     with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
@@ -45,7 +49,7 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
   T? _selectedItem;
   Timer? _debounceTimer;
   String _lastQuery = '';
-  bool _hasLoadedInitial = false; 
+  bool _hasLoadedInitial = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   @override
@@ -58,17 +62,19 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
     _setupAnimations();
     _focusNode.addListener(_onFocusChanged);
   }
+
   void _setupAnimations() {
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 250),
       vsync: this,
     );
-    
+
     _fadeAnimation = CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeOutCubic,
     );
   }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -78,12 +84,19 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
     _removeOverlay();
     super.dispose();
   }
+
   void _onFocusChanged() {
     if (_focusNode.hasFocus) {
       _showSuggestions();
+
+      // ريفرش عند الضغط على الـ TextField
       if (!_hasLoadedInitial) {
         _loadInitialData();
+      } else {
+        // ريفرش البيانات في كل مرة يتم الضغط
+        _manualRefresh();
       }
+
       final currentText = _controller.text.trim();
       if (currentText.isNotEmpty && currentText != _lastQuery) {
         _searchItems(currentText, immediate: true);
@@ -96,6 +109,7 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
       });
     }
   }
+
   Future<void> _loadInitialData() async {
     if (_hasLoadedInitial) return;
     setState(() {
@@ -124,9 +138,10 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
       }
     }
   }
+
   void _onTextChanged(String value) {
     final trimmedValue = value.trim();
-    
+
     if (trimmedValue != _lastQuery) {
       setState(() {
         _suggestions = [];
@@ -134,11 +149,13 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
       });
       _updateOverlay();
     }
+
     _debounceTimer?.cancel();
-    
+
     if (trimmedValue.isNotEmpty) {
       setState(() => _isLoading = true);
-      _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      // بحث فوري مع تأخير قصير
+      _debounceTimer = Timer(const Duration(milliseconds: 100), () {
         _searchItems(trimmedValue);
       });
     } else {
@@ -152,6 +169,7 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
     }
     _lastQuery = trimmedValue;
   }
+
   Future<void> _searchItems(String query, {bool immediate = false}) async {
     if (!mounted) return;
 
@@ -183,6 +201,7 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
       }
     }
   }
+
   void _showSuggestions() {
     if (!_showDropdown) {
       setState(() => _showDropdown = true);
@@ -190,6 +209,7 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
       _animationController.forward();
     }
   }
+
   void _hideSuggestions() {
     if (_showDropdown) {
       _animationController.reverse().then((_) {
@@ -200,18 +220,22 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
       });
     }
   }
+
   void _createOverlay() {
     _removeOverlay();
     _overlayEntry = OverlayEntry(builder: _buildOverlay);
     Overlay.of(context).insert(_overlayEntry!);
   }
+
   void _updateOverlay() {
     _overlayEntry?.markNeedsBuild();
   }
+
   void _removeOverlay() {
     _overlayEntry?.remove();
     _overlayEntry = null;
   }
+
   void _selectItem(T item) {
     setState(() {
       _selectedItem = item;
@@ -221,7 +245,8 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
     widget.onChanged(item);
     _focusNode.unfocus();
     _hideSuggestions();
-      }
+  }
+
   void _clearSelection() {
     setState(() {
       _selectedItem = null;
@@ -232,7 +257,8 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
     });
     widget.onChanged(null);
     _focusNode.requestFocus();
-      }
+  }
+
   Future<void> _manualRefresh() async {
     _hasLoadedInitial = false;
     if (_controller.text.trim().isNotEmpty) {
@@ -241,6 +267,7 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
       await _loadInitialData();
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return CompositedTransformTarget(
@@ -251,9 +278,9 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
           Text(
             widget.label,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.black,
-              fontWeight: FontWeight.w500,
-            ),
+                  color: Colors.black,
+                  fontWeight: FontWeight.w500,
+                ),
           ),
           const Gap(AppSpaces.small),
           TextFormField(
@@ -261,6 +288,13 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
             focusNode: _focusNode,
             validator: widget.validator,
             onChanged: _onTextChanged,
+            onTap: () {
+              // ريفرش عند الضغط على الحقل
+              if (!_focusNode.hasFocus) {
+                _focusNode.requestFocus();
+              }
+              _manualRefresh();
+            },
             style: const TextStyle(
               fontWeight: FontWeight.w400,
               fontSize: 16,
@@ -303,6 +337,7 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
       ),
     );
   }
+
   Widget _buildSuffixIcon() {
     if (_isLoading) {
       return Padding(
@@ -319,19 +354,10 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
         ),
       );
     }
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (widget.enableRefresh)
-          IconButton(
-            onPressed: _manualRefresh,
-            icon: Icon(
-              Icons.refresh,
-              color: context.colorScheme.primary,
-              size: 20,
-            ),
-            tooltip: 'تحديث النتائج',
-          ),        
         if (_selectedItem != null)
           IconButton(
             onPressed: _clearSelection,
@@ -354,6 +380,7 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
       ],
     );
   }
+
   Widget _buildOverlay(BuildContext context) {
     return Positioned(
       width: MediaQuery.of(context).size.width - 32,
@@ -383,6 +410,7 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
       ),
     );
   }
+
   Widget _buildContent() {
     if (_isLoading) {
       return Container(
@@ -450,6 +478,7 @@ class _RegistrationSearchDropDownState<T> extends State<RegistrationSearchDropDo
     }
     return _buildSuggestionsListView();
   }
+
   Widget _buildSuggestionsListView() {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(vertical: 8),

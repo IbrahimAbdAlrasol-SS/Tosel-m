@@ -164,7 +164,6 @@ class _ZonesScreenState extends ConsumerState<ZonesScreen> {
               ),
             ),
           ),
-          //? Location Name and Address
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
