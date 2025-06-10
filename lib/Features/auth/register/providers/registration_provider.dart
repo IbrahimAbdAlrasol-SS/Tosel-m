@@ -1,8 +1,11 @@
+import 'dart:async';
+
+import 'package:Tosell/Features/profile/models/zone.dart';
+import 'package:Tosell/Features/profile/services/zone_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:Tosell/Features/auth/Services/Auth_service.dart';
 import 'package:Tosell/Features/auth/register/models/registration_zone.dart';
-import 'package:Tosell/Features/auth/register/services/registration_zone_service.dart';
 import 'package:Tosell/core/Client/BaseClient.dart';
 
 part 'registration_provider.g.dart';
@@ -24,7 +27,7 @@ class RegistrationState {
   
   // المناطق
   final List<RegistrationZoneInfo> zones;
-  final List<RegistrationZone> availableZones;
+  final List<Zone> availableZones;
   final bool isLoadingZones;
   
   // حالة التسجيل
@@ -59,7 +62,7 @@ class RegistrationState {
     String? uploadedImageUrl,
     bool? isUploadingImage,
     List<RegistrationZoneInfo>? zones,
-    List<RegistrationZone>? availableZones,
+    List<Zone>? availableZones,
     bool? isLoadingZones,
     bool? isSubmitting,
     String? error,
@@ -85,8 +88,8 @@ class RegistrationState {
 }
 
 class RegistrationZoneInfo {
-  final RegistrationGovernorate? selectedGovernorate;
-  final RegistrationZone? selectedZone;
+  final Governorate? selectedGovernorate;
+  final Zone? selectedZone;
   final String nearestLandmark;
   final double? latitude;
   final double? longitude;
@@ -100,8 +103,8 @@ class RegistrationZoneInfo {
   });
 
   RegistrationZoneInfo copyWith({
-    RegistrationGovernorate? selectedGovernorate,
-    RegistrationZone? selectedZone,
+    Governorate? selectedGovernorate,
+    Zone? selectedZone,
     String? nearestLandmark,
     double? latitude,
     double? longitude,
@@ -133,7 +136,7 @@ class RegistrationZoneInfo {
 class RegistrationNotifier extends _$RegistrationNotifier {
   final AuthService _authService = AuthService();
   final BaseClient _baseClient = BaseClient();
-  final RegistrationZoneService _zoneService = RegistrationZoneService();
+  final ZoneService _zoneService = ZoneService();
 
   @override
   RegistrationState build() {
@@ -217,7 +220,7 @@ class RegistrationNotifier extends _$RegistrationNotifier {
     state = state.copyWith(isLoadingZones: true, error: null);
 
     try {
-      final zones = await _zoneService.getGovernorates();
+      final zones = await _zoneService.getAllZones();
       
       state = state.copyWith(
         availableZones: [],

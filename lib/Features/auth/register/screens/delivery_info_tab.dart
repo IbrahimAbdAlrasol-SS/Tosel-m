@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:Tosell/Features/profile/providers/zone_provider.dart';
+import 'package:Tosell/Features/profile/services/zone_service.dart';
 import 'package:gap/gap.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -9,7 +13,6 @@ import 'package:Tosell/core/widgets/CustomTextFormField.dart';
 import 'package:Tosell/core/widgets/custom_search_drop_down.dart';
 import 'package:Tosell/core/router/app_router.dart';
 import 'package:Tosell/Features/auth/register/models/registration_zone.dart';
-import 'package:Tosell/Features/auth/register/services/registration_zone_service.dart';
 import 'package:Tosell/Features/auth/register/providers/registration_provider.dart';
 
 class DeliveryInfoTab extends ConsumerStatefulWidget {
@@ -21,7 +24,7 @@ class DeliveryInfoTab extends ConsumerStatefulWidget {
 
 class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
   Set<int> expandedTiles = {};
-  final RegistrationZoneService _zoneService = RegistrationZoneService();
+  final ZoneService _zoneService = ZoneService();
 
   @override
   void initState() {
@@ -47,11 +50,11 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
             ...state.zones.asMap().entries.map((entry) {
               final index = entry.key;
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6),
                 child: _buildLocationCard(index, state.zones[index]),
               );
             }),
-
             const SizedBox(height: 12),
             _buildAddLocationButton(),
           ],
@@ -113,7 +116,19 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildGovernorateDropdown(index, zoneInfo),
+                FutureBuilder<Widget>(
+
+
+                  future: _buildGovernorateDropdown(index, zoneInfo),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      return snapshot.data!;
+                    }
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  },
+                ),
                 const Gap(5),
                 _buildZoneDropdown(index, zoneInfo),
                 const Gap(5),
@@ -128,27 +143,30 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
     );
   }
 
-  Widget _buildGovernorateDropdown(int index, RegistrationZoneInfo zoneInfo) {
-    return RegistrationSearchDropDown<RegistrationGovernorate>(
+  Future<Widget> _buildGovernorateDropdown(
+      int index, RegistrationZoneInfo zoneInfo) async {
+    final result =
+        await _zoneService.getAllZones(queryParams: {"name": "query"});
+    return RegistrationSearchDropDown<zoneNotifier>(
       label: "المحافظة",
       hint: "ابحث عن المحافظة... مثال: 'بغداد'",
-      selectedValue: zoneInfo.selectedGovernorate,
-      itemAsString: (gov) => gov.name ?? '',
+      itemAsString: (gov) => gov.name?? '',
       asyncItems: (query) async {
-        return await _zoneService.getGovernorates(
-          query: query.isEmpty ? null : query,
-        );
+        return result
       },
       onChanged: (governorate) {
         final updatedZone = zoneInfo.copyWith(
           selectedGovernorate: governorate,
           selectedZone: null,
         );
-        ref.read(registrationNotifierProvider.notifier).updateZone(index, updatedZone);
+        ref
+            .read(registrationNotifierProvider.notifier)
+            .updateZone(index, updatedZone);
       },
       itemBuilder: (context, governorate) => Row(
         children: [
-          Icon(Icons.location_city, color: context.colorScheme.primary, size: 18),
+          Icon(Icons.location_city,
+              color: context.colorScheme.primary, size: 18),
           const Gap(8),
           Expanded(
             child: Text(
@@ -172,22 +190,24 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
     final selectedGov = zoneInfo.selectedGovernorate;
     return RegistrationSearchDropDown<RegistrationZone>(
       label: "المنطقة",
-      hint: selectedGov == null 
-          ? "اختر المحافظة أولاً" 
+      hint: selectedGov == null
+          ? "اختر المحافظة أولاً"
           : "ابحث عن المنطقة... مثال: 'المنصور'",
       selectedValue: zoneInfo.selectedZone,
       itemAsString: (zone) => zone.name ?? '',
       asyncItems: (query) async {
         if (selectedGov?.id == null) return [];
-        
-        return await _zoneService.getZonesByGovernorate(
+
+        return await _zoneService.getAllZones(
           governorateId: selectedGov!.id!,
           query: query.isEmpty ? null : query,
         );
       },
       onChanged: (zone) {
         final updatedZone = zoneInfo.copyWith(selectedZone: zone);
-        ref.read(registrationNotifierProvider.notifier).updateZone(index, updatedZone);
+        ref
+            .read(registrationNotifierProvider.notifier)
+            .updateZone(index, updatedZone);
       },
       itemBuilder: (context, zone) => Row(
         children: [
@@ -218,26 +238,28 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
       selectedValue: zoneInfo.nearestLandmark,
       onChanged: (value) {
         final updatedZone = zoneInfo.copyWith(nearestLandmark: value);
-        ref.read(registrationNotifierProvider.notifier).updateZone(index, updatedZone);
+        ref
+            .read(registrationNotifierProvider.notifier)
+            .updateZone(index, updatedZone);
       },
     );
   }
 
   Widget _buildLocationPicker(int index, RegistrationZoneInfo zoneInfo) {
     final hasLocation = zoneInfo.latitude != null && zoneInfo.longitude != null;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'الموقع على الخريطة',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w500,
-            fontSize: 16,
-          ),
+                fontWeight: FontWeight.w500,
+                fontSize: 16,
+              ),
         ),
         const Gap(5),
-        
+
         // زر تحديد الموقع
         InkWell(
           onTap: () => _openLocationPicker(index, zoneInfo),
@@ -247,12 +269,12 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: hasLocation 
+                color: hasLocation
                     ? context.colorScheme.primary
                     : context.colorScheme.outline,
                 width: hasLocation ? 2 : 1,
               ),
-              color: hasLocation 
+              color: hasLocation
                   ? context.colorScheme.primary.withOpacity(0.05)
                   : Colors.grey.withOpacity(0.05),
             ),
@@ -262,9 +284,8 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
                 children: [
                   SvgPicture.asset(
                     'assets/svg/MapPinLine.svg',
-                    color: hasLocation 
-                        ? context.colorScheme.primary
-                        : Colors.grey,
+                    color:
+                        hasLocation ? context.colorScheme.primary : Colors.grey,
                     height: 24,
                   ),
                   const Gap(15),
@@ -272,7 +293,7 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
                     hasLocation ? 'تم تحديد الموقع' : 'تحديد الموقع',
                     style: context.textTheme.bodyMedium?.copyWith(
                       fontSize: 16,
-                      color: hasLocation 
+                      color: hasLocation
                           ? context.colorScheme.primary
                           : Colors.grey,
                       fontWeight: FontWeight.w500,
@@ -292,7 +313,7 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
             ),
           ),
         ),
-        
+
         // عرض الإحداثيات
         if (hasLocation) ...[
           const Gap(5),
@@ -307,7 +328,8 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
             ),
             child: Row(
               children: [
-                Icon(Icons.location_on, color: context.colorScheme.primary, size: 16),
+                Icon(Icons.location_on,
+                    color: context.colorScheme.primary, size: 16),
                 const Gap(8),
                 Expanded(
                   child: Text(
@@ -342,8 +364,7 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
           child: InkWell(
             borderRadius: BorderRadius.circular(60),
             onTap: () {
-              ref.read(registrationNotifierProvider.notifier)
-              .addMarchentZone();
+              ref.read(registrationNotifierProvider.notifier).addMarchentZone();
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -381,7 +402,8 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
     });
   }
 
-  Future<void> _openLocationPicker(int index, RegistrationZoneInfo zoneInfo) async {
+  Future<void> _openLocationPicker(
+      int index, RegistrationZoneInfo zoneInfo) async {
     try {
       final result = await context.push(
         AppRoutes.mapSelection,
@@ -397,8 +419,10 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
           latitude: result['latitude'],
           longitude: result['longitude'],
         );
-        ref.read(registrationNotifierProvider.notifier).updateZone(index, updatedZone);
-        
+        ref
+            .read(registrationNotifierProvider.notifier)
+            .updateZone(index, updatedZone);
+
         // إظهار رسالة نجاح
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -406,7 +430,8 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 const Gap(8),
-                Text('تم حفظ الموقع بنجاح', style: TextStyle(fontFamily: "Tajawal")),
+                Text('تم حفظ الموقع بنجاح',
+                    style: TextStyle(fontFamily: "Tajawal")),
               ],
             ),
             backgroundColor: Colors.green,
@@ -417,7 +442,8 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('حدث خطأ في فتح الخريطة', style: TextStyle(fontFamily: "Tajawal")),
+          content: Text('حدث خطأ في فتح الخريطة',
+              style: TextStyle(fontFamily: "Tajawal")),
           backgroundColor: Colors.red,
         ),
       );
