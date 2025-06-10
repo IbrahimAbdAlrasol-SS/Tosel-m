@@ -8,6 +8,7 @@ class ZoneService {
       : baseClient = BaseClient<ZoneObject>(
             fromJson: (json) => ZoneObject.fromJson(json));
 
+  /// جلب جميع المناطق
   Future<List<Zone>> getAllZones(
       {Map<String, dynamic>? queryParams, int page = 1}) async {
     try {
@@ -20,6 +21,36 @@ class ZoneService {
     }
   }
 
+  /// جلب المناطق حسب ID المحافظة مع إمكانية البحث
+  Future<List<Zone>> getZonesByGovernorateId({
+    required int governorateId,
+    String? query,
+    int page = 1
+  }) async {
+    try {
+      // جلب جميع المناطق
+      var allZones = await getAllZones(page: page);
+      
+      // تصفية المناطق حسب المحافظة
+      var filteredZones = allZones.where((zone) => 
+        zone.governorate?.id == governorateId
+      ).toList();
+      
+      // تصفية حسب البحث إذا كان موجود
+      if (query != null && query.trim().isNotEmpty) {
+        filteredZones = filteredZones.where((zone) => 
+          zone.name?.toLowerCase().contains(query.toLowerCase()) ?? false
+        ).toList();
+      }
+      
+      return filteredZones;
+    } catch (e) {
+      print('Error in getZonesByGovernorateId: $e');
+      rethrow;
+    }
+  }
+
+  /// جلب مناطق المتجر الخاصة بي
   Future<List<Zone>> getMyZones() async {
     try {
       var result = await baseClient.get(endpoint: '/merchantzones/merchant');

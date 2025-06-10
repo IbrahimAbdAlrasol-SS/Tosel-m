@@ -59,7 +59,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
   }
 
   Future<void> _submitRegistration() async {
-    final registrationNotifier =  ref.read(registrationNotifierProvider.notifier);
+    final registrationNotifier = ref.read(registrationNotifierProvider.notifier);
     
     if (!registrationNotifier.validateUserInfo() || !registrationNotifier.validateZones()) {
       final error = ref.read(registrationNotifierProvider).error;
@@ -76,6 +76,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     
     if (success) {
       GlobalToast.showSuccess(message: 'تم التسجيل بنجاح! مرحباً بك في توصيل');
+      // ✅ حفظ البيانات في SharedPreferences
 
       
     
@@ -357,7 +358,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
           child: UserInfoTab(onNext: _goToNextTab),
         ),
         
-        SingleChildScrollView(  
+        SingleChildScrollView(  // ✅ إضافة scroll منفصل لكل tab
           child: Column(
             children: [
               DeliveryInfoTab(),

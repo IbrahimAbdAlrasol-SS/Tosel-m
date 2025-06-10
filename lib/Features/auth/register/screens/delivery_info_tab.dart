@@ -1,7 +1,8 @@
 import 'dart:async';
 
-import 'package:Tosell/Features/profile/providers/zone_provider.dart';
+import 'package:Tosell/Features/profile/services/governorate_service.dart';
 import 'package:Tosell/Features/profile/services/zone_service.dart';
+import 'package:Tosell/Features/profile/models/zone.dart';
 import 'package:gap/gap.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -12,7 +13,6 @@ import 'package:Tosell/core/utils/extensions.dart';
 import 'package:Tosell/core/widgets/CustomTextFormField.dart';
 import 'package:Tosell/core/widgets/custom_search_drop_down.dart';
 import 'package:Tosell/core/router/app_router.dart';
-import 'package:Tosell/Features/auth/register/models/registration_zone.dart';
 import 'package:Tosell/Features/auth/register/providers/registration_provider.dart';
 
 class DeliveryInfoTab extends ConsumerStatefulWidget {
@@ -24,6 +24,7 @@ class DeliveryInfoTab extends ConsumerStatefulWidget {
 
 class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
   Set<int> expandedTiles = {};
+  final GovernorateService _governorateService = GovernorateService();
   final ZoneService _zoneService = ZoneService();
 
   @override
@@ -78,9 +79,9 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
         title: Row(
           children: [
             Expanded(
-              child: const Text(
-                "عنوان إستلام البضاعة",
-                style: TextStyle(
+              child: Text(
+                "عنوان إستلام البضاعة ${index + 1}",
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                   fontFamily: "Tajawal",
@@ -92,7 +93,7 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
             if (ref.watch(registrationNotifierProvider).zones.length > 1)
               IconButton(
                 onPressed: () => _removeLocation(index),
-                icon: Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
               ),
           ],
         ),
@@ -116,19 +117,7 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                FutureBuilder<Widget>(
-
-
-                  future: _buildGovernorateDropdown(index, zoneInfo),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasData) {
-                      return snapshot.data!;
-                    }
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  },
-                ),
+                _buildGovernorateDropdown(index, zoneInfo),
                 const Gap(5),
                 _buildZoneDropdown(index, zoneInfo),
                 const Gap(5),
@@ -143,21 +132,35 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
     );
   }
 
-  Future<Widget> _buildGovernorateDropdown(
-      int index, RegistrationZoneInfo zoneInfo) async {
-    final result =
-        await _zoneService.getAllZones(queryParams: {"name": "query"});
-    return RegistrationSearchDropDown<zoneNotifier>(
+  /// ✅ dropdown المحافظات - يستخدم GovernorateService
+  Widget _buildGovernorateDropdown(int index, RegistrationZoneInfo zoneInfo) {
+    return RegistrationSearchDropDown<Governorate>(
       label: "المحافظة",
       hint: "ابحث عن المحافظة... مثال: 'بغداد'",
-      itemAsString: (gov) => gov.name?? '',
+      selectedValue: zoneInfo.selectedGovernorate,
+      itemAsString: (gov) => gov.name ?? '',
       asyncItems: (query) async {
-        return result
+        try {
+          // جلب جميع المحافظات
+          final governorates = await _governorateService.getAllZones();
+          
+          // تصفية حسب البحث إذا كان موجود
+          if (query.trim().isNotEmpty) {
+            return governorates.where((gov) => 
+              gov.name?.toLowerCase().contains(query.toLowerCase()) ?? false
+            ).toList();
+          }
+          
+          return governorates;
+        } catch (e) {
+          print('Error loading governorates: $e');
+          return [];
+        }
       },
       onChanged: (governorate) {
         final updatedZone = zoneInfo.copyWith(
           selectedGovernorate: governorate,
-          selectedZone: null,
+          selectedZone: null, // مسح المنطقة المختارة عند تغيير المحافظة
         );
         ref
             .read(registrationNotifierProvider.notifier)
@@ -180,28 +183,87 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
           ),
         ],
       ),
-      emptyText: "",
+      emptyText: "لا توجد محافظات",
       errorText: "خطأ في تحميل المحافظات",
       enableRefresh: true,
     );
   }
 
+  /// ✅ dropdown المناطق - حل مبسط بدون selectedValue
   Widget _buildZoneDropdown(int index, RegistrationZoneInfo zoneInfo) {
     final selectedGov = zoneInfo.selectedGovernorate;
-    return RegistrationSearchDropDown<RegistrationZone>(
+    
+    return RegistrationSearchDropDown<Zone>(
       label: "المنطقة",
       hint: selectedGov == null
           ? "اختر المحافظة أولاً"
-          : "ابحث عن المنطقة... مثال: 'المنصور'",
-      selectedValue: zoneInfo.selectedZone,
+          : zoneInfo.selectedZone?.name ?? "ابحث عن المنطقة...",
+      // selectedValue: zoneInfo.selectedZone, // مُعطل مؤقتاً للاختبار
       itemAsString: (zone) => zone.name ?? '',
       asyncItems: (query) async {
-        if (selectedGov?.id == null) return [];
+        // إذا لم يتم اختيار محافظة، ارجع قائمة فارغة
+        if (selectedGov?.id == null) {
+          print('❌ لا توجد محافظة مختارة');
+          return [];
+        }
 
-        return await _zoneService.getAllZones(
-          governorateId: selectedGov!.id!,
-          query: query.isEmpty ? null : query,
-        );
+        try {
+          print('🔍 جاري جلب المناطق للمحافظة: ${selectedGov!.name} (ID: ${selectedGov!.id})');
+          
+          // جلب جميع المناطق
+          final allZones = await _zoneService.getAllZones();
+          print('📋 تم جلب ${allZones.length} منطقة إجمالي');
+          
+          if (allZones.isEmpty) {
+            print('⚠️ لا توجد مناطق في الـ API');
+            return [];
+          }
+          
+          // عرض عينة من البيانات للتأكد من الهيكل
+          if (allZones.isNotEmpty) {
+            final sampleZone = allZones.first;
+            print('📝 عينة من البيانات:');
+            print('   اسم المنطقة: ${sampleZone.name}');
+            print('   اسم المحافظة: ${sampleZone.governorate?.name}');
+            print('   ID المحافظة: ${sampleZone.governorate?.id}');
+            print('   نوع المحافظة المطلوب: ${selectedGov!.id}');
+          }
+          
+          // تصفية المناطق حسب المحافظة المختارة
+          var filteredZones = allZones.where((zone) {
+            final zoneGovId = zone.governorate?.id;
+            final selectedGovId = selectedGov!.id;
+            
+            print('🔍 مقارنة: $zoneGovId == $selectedGovId (${zone.name})');
+            
+            return zoneGovId == selectedGovId;
+          }).toList();
+          
+          print('🎯 تم العثور على ${filteredZones.length} منطقة للمحافظة ${selectedGov!.name}');
+          
+          // عرض أسماء المناطق المفلترة
+          if (filteredZones.isNotEmpty) {
+            print('📍 المناطق المفلترة:');
+            for (var zone in filteredZones.take(5)) {
+              print('   - ${zone.name}');
+            }
+          }
+          
+          // تصفية حسب البحث إذا كان موجود
+          if (query.trim().isNotEmpty) {
+            final beforeSearch = filteredZones.length;
+            filteredZones = filteredZones.where((zone) => 
+              zone.name?.toLowerCase().contains(query.toLowerCase()) ?? false
+            ).toList();
+            print('🔍 بعد البحث عن "$query": ${filteredZones.length} من $beforeSearch');
+          }
+          
+          return filteredZones;
+        } catch (e, stackTrace) {
+          print('❌ خطأ في جلب المناطق: $e');
+          print('📋 Stack trace: $stackTrace');
+          return [];
+        }
       },
       onChanged: (zone) {
         final updatedZone = zoneInfo.copyWith(selectedZone: zone);
@@ -214,18 +276,34 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
           Icon(Icons.place, color: context.colorScheme.primary, size: 18),
           const Gap(8),
           Expanded(
-            child: Text(
-              zone.name ?? '',
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 16,
-                fontFamily: "Tajawal",
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  zone.name ?? '',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 16,
+                    fontFamily: "Tajawal",
+                  ),
+                ),
+                if (zone.type != null)
+                  Text(
+                    zone.type == 1 ? 'المركز' : 'الأطراف',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: zone.type == 1 ? Colors.green : Colors.orange,
+                      fontFamily: "Tajawal",
+                    ),
+                  ),
+              ],
             ),
           ),
         ],
       ),
-      emptyText: "",
+      emptyText: selectedGov == null 
+          ? "اختر المحافظة أولاً" 
+          : "لا توجد مناطق لهذه المحافظة",
       errorText: "خطأ في تحميل المناطق",
       enableRefresh: true,
     );
@@ -428,14 +506,14 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.white),
+                const Icon(Icons.check_circle, color: Colors.white),
                 const Gap(8),
                 Text('تم حفظ الموقع بنجاح',
-                    style: TextStyle(fontFamily: "Tajawal")),
+                    style: const TextStyle(fontFamily: "Tajawal")),
               ],
             ),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -443,7 +521,7 @@ class _DeliveryInfoTabState extends ConsumerState<DeliveryInfoTab> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('حدث خطأ في فتح الخريطة',
-              style: TextStyle(fontFamily: "Tajawal")),
+              style: const TextStyle(fontFamily: "Tajawal")),
           backgroundColor: Colors.red,
         ),
       );

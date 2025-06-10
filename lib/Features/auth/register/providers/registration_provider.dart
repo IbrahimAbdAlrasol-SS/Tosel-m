@@ -5,7 +5,6 @@ import 'package:Tosell/Features/profile/services/zone_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:Tosell/Features/auth/Services/Auth_service.dart';
-import 'package:Tosell/Features/auth/register/models/registration_zone.dart';
 import 'package:Tosell/core/Client/BaseClient.dart';
 
 part 'registration_provider.g.dart';
