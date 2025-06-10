@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -5,6 +6,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:Tosell/core/utils/extensions.dart';
 import 'package:Tosell/core/widgets/CustomAppBar.dart';
 
@@ -24,19 +26,24 @@ class MapSelectionScreen extends StatefulWidget {
 
 class _MapSelectionScreenState extends State<MapSelectionScreen> {
   late final MapController _mapController;
-  LatLng? _selectedLocation;
-  bool _isLocationSelected = false;
+  late LatLng _currentLocation;
+  bool _isLocationSet = false;
+  bool _isGettingLocation = false;
 
   @override
   void initState() {
     super.initState();
     _mapController = MapController();
-
-    // إذا كان هناك موقع محدد مسبقاً
+    
+    // تحديد الموقع الافتراضي أو الموقع المحدد مسبقاً
+    _currentLocation = LatLng(
+      widget.initialLatitude ?? 33.3152,  // بغداد
+      widget.initialLongitude ?? 44.3661,
+    );
+    
+    // إذا كان هناك موقع محدد مسبقاً، اعتبره محدد
     if (widget.initialLatitude != null && widget.initialLongitude != null) {
-      _selectedLocation =
-          LatLng(widget.initialLatitude!, widget.initialLongitude!);
-      _isLocationSelected = true;
+      _isLocationSet = true;
     }
   }
 
@@ -46,22 +53,129 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
     super.dispose();
   }
 
-  void _onMapTapped(LatLng point) {
-  print('Location selected: ${point.latitude}, ${point.longitude}'); // أضف هذا
-  setState(() {
-    _selectedLocation = point;
-    _isLocationSelected = true;
-  });
-  HapticFeedback.lightImpact();
-}
+  Future<void> _setCurrentLocation() async {
+    setState(() {
+      _isGettingLocation = true;
+    });
+
+    try {
+      // التحقق من الأذونات
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _showLocationError('تم رفض إذن الوصول للموقع');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        _showLocationError('تم رفض إذن الوصول للموقع نهائياً. يرجى تفعيله من الإعدادات');
+        return;
+      }
+
+      // التحقق من تفعيل خدمات الموقع
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _showLocationError('خدمات الموقع غير مفعلة. يرجى تفعيلها من الإعدادات');
+        return;
+      }
+
+      // الحصول على الموقع الحالي
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: Duration(seconds: 15),
+      );
+
+      // تحديث الموقع على الخريطة
+      final newLocation = LatLng(position.latitude, position.longitude);
+      
+      setState(() {
+        _currentLocation = newLocation;
+        _isLocationSet = true;
+        _isGettingLocation = false;
+      });
+
+      // تحريك الخريطة للموقع الجديد
+      _mapController.move(newLocation, 16.0);
+      
+      HapticFeedback.lightImpact();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.location_on, color: Colors.white),
+              const Gap(8),
+              Text('تم تحديد موقعك الحالي بنجاح', style: TextStyle(fontFamily: "Tajawal")),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      
+      print('Real GPS Location: ${position.latitude}, ${position.longitude}');
+      print('Accuracy: ${position.accuracy} meters');
+      
+    } catch (e) {
+      setState(() {
+        _isGettingLocation = false;
+      });
+      
+      String errorMessage = 'فشل في تحديد الموقع';
+      if (e is TimeoutException) {
+        errorMessage = 'انتهت مهلة تحديد الموقع. تأكد من قوة الإشارة';
+      } else if (e is LocationServiceDisabledException) {
+        errorMessage = 'خدمات الموقع غير مفعلة';
+      } else if (e is PermissionDeniedException) {
+        errorMessage = 'تم رفض إذن الوصول للموقع';
+      }
+      
+      _showLocationError(errorMessage);
+      print('Location Error: $e');
+    }
+  }
+
+  void _showLocationError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.error, color: Colors.white),
+            const Gap(8),
+            Expanded(
+              child: Text(message, style: TextStyle(fontFamily: "Tajawal")),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.red,
+        duration: Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'الإعدادات',
+          textColor: Colors.white,
+          onPressed: () {
+            Geolocator.openAppSettings();
+          },
+        ),
+      ),
+    );
+  }
 
   void _confirmLocation() {
-    if (_selectedLocation != null) {
+    if (_isLocationSet) {
       // إرجاع الإحداثيات للصفحة السابقة
       context.pop({
-        'latitude': _selectedLocation!.latitude,
-        'longitude': _selectedLocation!.longitude,
+        'latitude': _currentLocation.latitude,
+        'longitude': _currentLocation.longitude,
       });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('يرجى تحديد الموقع أولاً', style: TextStyle(fontFamily: "Tajawal")),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -74,22 +188,22 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
           // App Bar
           const SafeArea(
             child: CustomAppBar(
-              title: "اختيار الموقع على الخريطة",
+              title: "تحديد الموقع",
               showBackButton: true,
             ),
           ),
 
-          // Map
+          // Map Container
           Expanded(
             child: Container(
               margin: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: _isLocationSelected
+                  color: _isLocationSet 
                       ? context.colorScheme.primary
                       : context.colorScheme.outline,
-                  width: _isLocationSelected ? 2 : 1,
+                  width: _isLocationSet ? 2 : 1,
                 ),
               ),
               child: ClipRRect(
@@ -100,28 +214,26 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
                     FlutterMap(
                       mapController: _mapController,
                       options: MapOptions(
-                        initialCenter: _selectedLocation ??
-                            LatLng(33.3152, 44.3661), // Baghdad
+                        initialCenter: _currentLocation,
                         initialZoom: 13.0,
-                        onTap: (tapPosition, point) {
-  print('Map tapped at: $point'); // للتأكد
-  _onMapTapped(point);
-},
                         maxZoom: 18.0,
                         minZoom: 5.0,
                       ),
                       children: [
+                        // طبقة الخريطة
                         TileLayer(
-                          urlTemplate:
-                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                           userAgentPackageName: 'com.tosell.app',
                         ),
-
+                        
                         // العلامة المحددة
-                        if (_selectedLocation != null)
+                        if (_isLocationSet)
                           MarkerLayer(
                             markers: [
                               Marker(
+                                point: _currentLocation,
+                                width: 50,
+                                height: 50,
                                 child: Container(
                                   decoration: BoxDecoration(
                                     color: context.colorScheme.primary,
@@ -140,46 +252,45 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
                                     size: 30,
                                   ),
                                 ),
-                                point: _selectedLocation!,
-                                width: 50,
-                                height: 50,
                               ),
                             ],
                           ),
                       ],
                     ),
 
-                    // تعليمات الاستخدام
-                    if (!_isLocationSelected)
-                      Positioned.fill(
-                        child: Container(
-                          color: Colors.black.withOpacity(0.4),
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SvgPicture.asset(
-                                  'assets/svg/MapPinLine.svg',
+                    // زر تحديد الموقع الحالي
+                    Positioned(
+                      bottom: 80,
+                      right: 16,
+                      child: FloatingActionButton.extended(
+                        onPressed: _isGettingLocation ? null : _setCurrentLocation,
+                        backgroundColor: _isGettingLocation 
+                            ? Colors.grey 
+                            : context.colorScheme.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 4,
+                        icon: _isGettingLocation 
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
                                   color: Colors.white,
-                                  height: 48,
+                                  strokeWidth: 2,
                                 ),
-                                const Gap(16),
-                                Text(
-                                  'اضغط على الخريطة لتحديد الموقع',
-                                  style:
-                                      context.textTheme.titleMedium?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
+                              )
+                            : const Icon(Icons.my_location),
+                        label: Text(
+                          _isGettingLocation ? 'جاري التحديد...' : 'تحديد موقعي',
+                          style: const TextStyle(
+                            fontFamily: "Tajawal",
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
+                    ),
 
                     // معلومات الموقع المحدد
-                    if (_isLocationSelected)
+                    if (_isLocationSet)
                       Positioned(
                         bottom: 16,
                         left: 16,
@@ -202,14 +313,11 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
                             children: [
                               Row(
                                 children: [
-                                  Icon(Icons.location_on,
-                                      color: context.colorScheme.primary,
-                                      size: 20),
+                                  Icon(Icons.location_on, color: context.colorScheme.primary, size: 20),
                                   const Gap(8),
                                   Text(
-                                    'تم تحديد الموقع بنجاح',
-                                    style:
-                                        context.textTheme.bodyMedium?.copyWith(
+                                    'تم تحديد الموقع',
+                                    style: context.textTheme.bodyMedium?.copyWith(
                                       fontWeight: FontWeight.w600,
                                       color: context.colorScheme.primary,
                                     ),
@@ -218,10 +326,44 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
                               ),
                               const Gap(8),
                               Text(
-                                'خط العرض: ${_selectedLocation!.latitude.toStringAsFixed(4)} | خط الطول: ${_selectedLocation!.longitude.toStringAsFixed(4)}',
+                                'خط العرض: ${_currentLocation.latitude.toStringAsFixed(4)} | خط الطول: ${_currentLocation.longitude.toStringAsFixed(4)}',
                                 style: context.textTheme.bodySmall?.copyWith(
                                   color: context.colorScheme.onSurface,
                                 ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                    // تعليمات الاستخدام
+                    if (!_isLocationSet)
+                      Positioned(
+                        top: 16,
+                        left: 16,
+                        right: 16,
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SvgPicture.asset(
+                                'assets/svg/MapPinLine.svg',
+                                color: Colors.white,
+                                height: 24,
+                              ),
+                              const Gap(8),
+                              Text(
+                                'استخدم "تحديد موقعي" للحصول على موقعك الحقيقي',
+                                style: context.textTheme.bodyMedium?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
                               ),
                             ],
                           ),
@@ -241,6 +383,13 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
               border: Border(
                 top: BorderSide(color: context.colorScheme.outline),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, -2),
+                ),
+              ],
             ),
             child: Row(
               children: [
@@ -255,17 +404,17 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
                     child: const Text('إلغاء'),
                   ),
                 ),
-
+                
                 const Gap(16),
-
+                
                 // زر موافق
                 Expanded(
                   flex: 2,
                   child: FilledButton(
-                    onPressed: _isLocationSelected ? _confirmLocation : null,
+                    onPressed: _isLocationSet ? _confirmLocation : null,
                     style: FilledButton.styleFrom(
-                      backgroundColor: _isLocationSelected
-                          ? context.colorScheme.primary
+                      backgroundColor: _isLocationSet 
+                          ? context.colorScheme.primary 
                           : Colors.grey,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
@@ -273,15 +422,13 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          _isLocationSelected
-                              ? Icons.check
-                              : Icons.location_disabled,
+                          _isLocationSet ? Icons.check : Icons.location_disabled,
                           color: Colors.white,
                           size: 20,
                         ),
                         const Gap(8),
                         Text(
-                          _isLocationSelected ? 'موافق' : 'حدد الموقع أولاً',
+                          _isLocationSet ? 'موافق' : 'حدد الموقع أولاً',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w600,
