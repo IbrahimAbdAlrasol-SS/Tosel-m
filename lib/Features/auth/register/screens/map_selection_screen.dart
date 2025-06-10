@@ -50,6 +50,12 @@ class _MapSelectionScreenState extends State<MapSelectionScreen> {
   @override
   void dispose() {
     _mapController.dispose();
+    
+    // مسح البيانات عند الخروج من الصفحة
+    _currentLocation = LatLng(33.3152, 44.3661); // العودة للموقع الافتراضي
+    _isLocationSet = false;
+    _isGettingLocation = false;
+    
     super.dispose();
   }
 

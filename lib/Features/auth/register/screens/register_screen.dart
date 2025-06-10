@@ -11,7 +11,6 @@ import 'package:Tosell/Features/auth/register/widgets/build_background.dart';
 import 'package:Tosell/Features/auth/register/screens/delivery_info_tab.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:Tosell/Features/auth/register/providers/registration_provider.dart';
-import 'package:Tosell/Features/auth/register/models/registration_zone.dart';
 import 'package:Tosell/core/utils/GlobalToast.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -279,16 +278,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
         controller: _tabController,
         physics: const NeverScrollableScrollPhysics(), // ✅ منع السحب للتنقل
         children: [
-          // ✅ تمرير callback للانتقال للتاب التالي
           UserInfoTab(onNext: _goToNextTab),
           
-          // ✅ التاب الثاني مع أزرار التحكم
           Column(
             children: [
-              // محتوى التوصيل
               Expanded(child: DeliveryInfoTab()),
               
-              // أزرار التحكم
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
