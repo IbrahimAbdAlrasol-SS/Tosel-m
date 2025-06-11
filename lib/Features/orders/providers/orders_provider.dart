@@ -11,18 +11,73 @@ part 'orders_provider.g.dart';
 class OrdersNotifier extends _$OrdersNotifier {
   final OrdersService _service = OrdersService();
 
-  Future<ApiResponse<Order>> getAll(
-      {int page = 1, Map<String, dynamic>? queryParams}) async {
-    return (await _service.getOrders(queryParams: queryParams, page: page));
+  /// 🎯 جلب جميع الطلبات
+  Future<ApiResponse<Order>> getAll({
+    int page = 1, 
+    Map<String, dynamic>? queryParams
+  }) async {
+    try {
+      return await _service.getOrders(queryParams: queryParams, page: page);
+    } catch (e) {
+      rethrow;
+    }
   }
 
-  Future<Order?>? getOrderByCode({required String code}) async {
-    return (await _service.getOrderByCode(code: code));
+  /// 🎯 جلب طلب واحد بالكود
+  Future<Order?> getOrderByCode({required String code}) async {
+    try {
+      return await _service.getOrderByCode(code: code);
+    } catch (e) {
+      rethrow;
+    }
   }
-   /// 🎯 إعادة تحديث البيانات مع معالجة أفضل للأخطاء
+
+  /// 🎯 إضافة طلب جديد
+  Future<(Order? order, String? error)> addOrder(AddOrderForm form) async {
+    try {
+      state = const AsyncValue.loading();
+      var result = await _service.addOrder(orderForm: form);
+
+      if (result.$1 != null) {
+        await refresh(); // Refresh the entire list
+        return (result.$1, null);
+      } else {
+        return (null, result.$2);
+      }
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+      return (null, e.toString());
+    }
+  }
+
+  /// 🎯 تغيير حالة الطلب
+  Future<(Order?, String?)> changeOrderState({required String code}) async {
+    try {
+      var result = await _service.changeOrderState(code: code);
+      
+      if (result.$1 != null) {
+        await refresh(); // Refresh the entire list
+      }
+      
+      return result;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// 🎯 التحقق من صحة الكود
+  Future<bool> validateCode({required String code}) async {
+    try {
+      return await _service.validateCode(code: code);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// 🎯 إعادة تحديث البيانات
   Future<void> refresh({Map<String, dynamic>? queryParams}) async {
     try {
-      // ✅ عدم إظهار loading إذا كانت هناك بيانات موجودة
+      // Don't show loading if we have data
       final hasData = state.hasValue && state.value!.isNotEmpty;
       
       if (!hasData) {
@@ -32,42 +87,38 @@ class OrdersNotifier extends _$OrdersNotifier {
       final result = await getAll(page: 1, queryParams: queryParams);
       state = AsyncValue.data(result.data ?? []);
     } catch (e) {
-      // ✅ إذا كانت هناك بيانات موجودة، احتفظ بها مع إظهار خطأ
+      // Keep current data if we have it, otherwise show error
       final currentData = state.valueOrNull;
-      if (currentData != null && currentData.isNotEmpty) {
-        // احتفظ بالبيانات الحالية ولكن اعرض خطأ
-        state = AsyncValue.error(e, StackTrace.current);
-      } else {
-        // لا توجد بيانات، اعرض خطأ فقط
+      if (currentData == null || currentData.isEmpty) {
         state = AsyncValue.error(e, StackTrace.current);
       }
     }
   }
 
-  Future<(Order? order, String? error)> addOrder(AddOrderForm form) async {
-    // Set the state to loading before starting the async operation
-    state = const AsyncValue.loading();
-
-    //? Added To Object
-
+  /// 🎯 البحث في الطلبات
+  Future<void> search(String searchTerm) async {
     try {
-      // Perform the API call to add the order
-      var result = await _service.addOrder(orderForm: form);
-
-      // Update the state with the result if successful
-      state = const AsyncValue.data([]);
-      if (result.$1 == null) return (null, result.$2);
-      return (result.$1, null); // success result
+      state = const AsyncValue.loading();
+      
+      final queryParams = searchTerm.isNotEmpty 
+          ? {'code': searchTerm}
+          : <String, dynamic>{};
+          
+      final result = await getAll(page: 1, queryParams: queryParams);
+      state = AsyncValue.data(result.data ?? []);
     } catch (e) {
-      // If there's an error, update the state with an error
-      state = AsyncError(e, StackTrace.current);
-      return (null, e.toString()); // return error
+      state = AsyncValue.error(e, StackTrace.current);
     }
   }
 
+  /// ✅ البناء الأولي للـ Provider
   @override
   FutureOr<List<Order>> build() async {
-    var result = await getAll();
-    return result.data ?? [];
+    try {
+      var result = await getAll();
+      return result.data ?? [];
+    } catch (e) {
+      throw e;
+    }
   }
 }

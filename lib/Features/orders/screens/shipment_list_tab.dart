@@ -3,27 +3,29 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:Tosell/core/constants/spaces.dart';
 import 'package:Tosell/core/utils/extensions.dart';
-import 'package:Tosell/core/router/app_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:Tosell/paging/generic_paged_list_view.dart';
 import 'package:Tosell/Features/orders/models/Shipment.dart';
 import 'package:Tosell/Features/orders/models/OrderFilter.dart';
 import 'package:Tosell/Features/orders/widgets/shipment_cart_Item.dart';
 import 'package:Tosell/Features/orders/providers/shipments_provider.dart';
-final shipmentsSearchProvider = StateProvider<String>((ref) => '');
+
 class shipmentInfoTab extends ConsumerStatefulWidget {
   final OrderFilter? filter;
   const shipmentInfoTab({super.key, this.filter});
+
   @override
   ConsumerState<shipmentInfoTab> createState() => _shipmentInfoTabState();
 }
+
 class _shipmentInfoTabState extends ConsumerState<shipmentInfoTab> {
   late OrderFilter _currentFilter;
+
   @override
   void initState() {
     super.initState();
     _currentFilter = widget.filter ?? OrderFilter();
   }
+
   @override
   void didUpdateWidget(covariant shipmentInfoTab oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -31,6 +33,7 @@ class _shipmentInfoTabState extends ConsumerState<shipmentInfoTab> {
       _currentFilter = widget.filter ?? OrderFilter();
     }
   }
+
   void _handleShipmentTap(Shipment shipment) {
     context.push(
       '/shipment-orders', 
@@ -40,6 +43,7 @@ class _shipmentInfoTabState extends ConsumerState<shipmentInfoTab> {
       },
     );
   }
+
   String _getSectionTitle() {
     if (_currentFilter.status != null) {
       return 'الشحنات المفلترة';
@@ -47,10 +51,10 @@ class _shipmentInfoTabState extends ConsumerState<shipmentInfoTab> {
       return 'جميع الوصولات';
     }
   }
+
   @override
   Widget build(BuildContext context) {
     final shipmentsState = ref.watch(shipmentsNotifierProvider);
-    final searchTerm = ref.watch(shipmentsSearchProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -58,10 +62,12 @@ class _shipmentInfoTabState extends ConsumerState<shipmentInfoTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Section title
             _buildSectionTitle(shipmentsState),
-
+            
             const Gap(AppSpaces.small),
-
+            
+            // Shipments list
             Expanded(
               child: shipmentsState.when(
                 data: (shipments) => _buildShipmentsList(shipments),
@@ -83,45 +89,27 @@ class _shipmentInfoTabState extends ConsumerState<shipmentInfoTab> {
           final filteredCount = shipments.length;
           return Text(
             '${_getSectionTitle()} ($filteredCount)',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           );
         },
         loading: () => Text(
           '${_getSectionTitle()} (جاري التحميل...)',
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         error: (_, __) => Text(
           _getSectionTitle(),
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
     );
   }
 
   Widget _buildShipmentsList(List<Shipment> shipments) {
-    if (shipments.isEmpty) {
-      return _buildNoItemsFound();
-    }
+    if (shipments.isEmpty) return _buildNoItemsFound();
 
-    return GenericPagedListView<Shipment>(
-      key: ValueKey(_currentFilter.toJson()),
-      fetchPage: (pageKey, _) async {
-        return await ref.read(shipmentsNotifierProvider.notifier).getAll(
-              page: pageKey,
-              queryParams: _currentFilter.toJson(),
-            );
-      },
-      itemBuilder: (context, shipment, index) => _buildShipmentItem(shipment),
-      noItemsFoundIndicatorBuilder: _buildNoItemsFound(),
+    return ListView.builder(
+      itemCount: shipments.length,
+      itemBuilder: (context, index) => _buildShipmentItem(shipments[index]),
     );
   }
 
@@ -141,43 +129,19 @@ class _shipmentInfoTabState extends ConsumerState<shipmentInfoTab> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.error_outline,
-            size: 64,
-            color: Theme.of(context).colorScheme.error,
-          ),
+          Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
           const Gap(AppSpaces.medium),
-          Text(
-            'حدث خطأ',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.error,
-            ),
-          ),
+          Text('حدث خطأ', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.error)),
           const Gap(AppSpaces.small),
-          Text(
-            error,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.secondary,
-            ),
-          ),
+          Text(error, textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
           const Gap(AppSpaces.medium),
           ElevatedButton(
-            onPressed: () {
-              ref.read(shipmentsNotifierProvider.notifier).getAll(
-                    page: 1,
-                    queryParams: _currentFilter.toJson(),
-                  );
-            },
+            onPressed: () => ref.read(shipmentsNotifierProvider.notifier).refresh(),
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             child: const Text('إعادة المحاولة'),
           ),
@@ -186,17 +150,12 @@ class _shipmentInfoTabState extends ConsumerState<shipmentInfoTab> {
     );
   }
 
-  /// ✅ Build no items found state
   Widget _buildNoItemsFound() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Image.asset(
-            'assets/svg/NoItemsFound.gif',
-            width: 240,
-            height: 240,
-          ),
+          Image.asset('assets/svg/NoItemsFound.gif', width: 240, height: 240),
           const Gap(AppSpaces.medium),
           Text(
             'لا توجد وصولات',
@@ -216,8 +175,6 @@ class _shipmentInfoTabState extends ConsumerState<shipmentInfoTab> {
               fontSize: 16,
             ),
           ),
-      
-
         ],
       ),
     );
