@@ -1,4 +1,3 @@
-// lib/Features/auth/register/screens/register_screen.dart
 import 'package:Tosell/Features/auth/login/providers/auth_provider.dart';
 import 'package:Tosell/Features/profile/models/zone.dart';
 import 'package:gap/gap.dart';
@@ -296,7 +295,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
               _buildBackgroundSection(),
               _buildBottomSheetSection(),
               
-              // ✅ شاشة التحميل أثناء التسجيل
               if (_isSubmitting)
                 Container(
                   color: Colors.black.withOpacity(0.5),
@@ -512,10 +510,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
         SingleChildScrollView(
           child: Column(
             children: [
+              // ****************************************
               DeliveryInfoTab(
                 onZonesChangedWithLocation: _updateZonesWithLocation,
                 initialZones: selectedZones,
               ),
+              // ****************************************
               
               Container(
                 padding: const EdgeInsets.all(16),
