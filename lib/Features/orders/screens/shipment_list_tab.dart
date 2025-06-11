@@ -21,8 +21,12 @@ class shipmentInfoTab extends ConsumerStatefulWidget {
       _shipmentInfoTabState();
 }
 
-class _shipmentInfoTabState extends ConsumerState<shipmentInfoTab> {
+class _shipmentInfoTabState extends ConsumerState<shipmentInfoTab>
+    with AutomaticKeepAliveClientMixin {
   late OrderFilter? _currentFilter;
+
+  @override
+  bool get wantKeepAlive => true; // Keep state alive to prevent rebuilds
 
   @override
   void initState() {
@@ -33,6 +37,7 @@ class _shipmentInfoTabState extends ConsumerState<shipmentInfoTab> {
   @override
   void didUpdateWidget(covariant shipmentInfoTab oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Only update if filter actually changed
     if (widget.filter != oldWidget.filter) {
       _currentFilter = widget.filter ?? OrderFilter();
     }
@@ -40,6 +45,8 @@ class _shipmentInfoTabState extends ConsumerState<shipmentInfoTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
+    
     final shipmentsState = ref.watch(shipmentsNotifierProvider);
 
     return Scaffold(
@@ -73,7 +80,35 @@ class _shipmentInfoTabState extends ConsumerState<shipmentInfoTab> {
                 child: Center(child: CircularProgressIndicator()),
               ),
               error: (err, _) => Expanded(
-                child: Center(child: Text(err.toString())),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        color: Theme.of(context).colorScheme.error,
+                        size: 48,
+                      ),
+                      const Gap(AppSpaces.medium),
+                      Text(
+                        'حدث خطأ في تحميل الشحنات',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Gap(AppSpaces.small),
+                      Text(
+                        err.toString(),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.secondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
@@ -85,9 +120,18 @@ class _shipmentInfoTabState extends ConsumerState<shipmentInfoTab> {
   Expanded _buildUi(List<Shipment> data) {
     return Expanded(
       child: GenericPagedListView(
-        key: ValueKey(widget.filter?.toJson()),
+        key: ValueKey('shipments_${widget.filter?.toJson()}_stable'),
         noItemsFoundIndicatorBuilder: _buildNoItemsFound(),
         fetchPage: (pageKey, _) async {
+          // Only fetch if it's the first page and we need more data
+          if (pageKey == 1 && data.isNotEmpty) {
+            // Return existing data without making new API call for navigation
+            return await ref.read(shipmentsNotifierProvider.notifier).getAll(
+              page: pageKey,
+              queryParams: _currentFilter?.toJson(),
+            );
+          }
+          
           return await ref.read(shipmentsNotifierProvider.notifier).getAll(
             page: pageKey,
             queryParams: _currentFilter?.toJson(),

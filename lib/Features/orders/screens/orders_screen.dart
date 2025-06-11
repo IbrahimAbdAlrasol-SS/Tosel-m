@@ -14,7 +14,6 @@ import 'package:Tosell/core/router/app_router.dart';
 import 'package:Tosell/core/widgets/FillButton.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:Tosell/Features/orders/models/Order.dart';
-import 'package:Tosell/paging/generic_paged_list_view.dart';
 import 'package:Tosell/core/widgets/CustomTextFormField.dart';
 import 'package:Tosell/Features/orders/models/order_enum.dart';
 import 'package:Tosell/Features/orders/models/OrderFilter.dart';
@@ -26,9 +25,12 @@ import 'package:Tosell/Features/orders/providers/shipments_provider.dart';
 import 'package:Tosell/Features/orders/services/shipments_service.dart';
 import 'package:Tosell/core/utils/GlobalToast.dart';
 
-// StateProvider for multi-select functionality
+// Global providers for multi-select functionality
 final selectedOrdersProvider = StateProvider<Set<String>>((ref) => <String>{});
 final isMultiSelectModeProvider = StateProvider<bool>((ref) => false);
+
+// Provider to track if initial data has been loaded
+final dataLoadedProvider = StateProvider<bool>((ref) => false);
 
 class OrdersScreen extends ConsumerStatefulWidget {
   final OrderFilter? filter;
@@ -39,43 +41,72 @@ class OrdersScreen extends ConsumerStatefulWidget {
 }
 
 class _OrdersScreenState extends ConsumerState<OrdersScreen>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   late OrderFilter? _currentFilter;
-  late TabController _tabController;
+  TabController? _tabController;
   int _currentIndex = 0;
   final ShipmentsService _shipmentsService = ShipmentsService();
   bool _isCreatingShipment = false;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _currentFilter = widget.filter;
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(_onTabChanged);
-    _fetchInitialData();
+    
+    // Initialize TabController properly
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _initializeTabController();
+        _loadDataOnce();
+      }
+    });
   }
 
-  void _onTabChanged() {
-    if (_tabController.indexIsChanging) {
+  void _initializeTabController() {
+    if (_tabController == null) {
+      _tabController = TabController(length: 2, vsync: this);
+      _tabController!.addListener(_onTabChanged);
       setState(() {
-        _currentIndex = _tabController.index;
+        _isInitialized = true;
       });
     }
   }
 
-  void _fetchInitialData() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Fetch orders
-      ref.read(ordersNotifierProvider.notifier).getAll(
-            page: 1,
-            queryParams: _currentFilter?.toJson(),
-          );
-      // Fetch shipments
-      ref.read(shipmentsNotifierProvider.notifier).getAll(
-            page: 1,
-            queryParams: _currentFilter?.toJson(),
-          );
-    });
+  void _onTabChanged() {
+    if (_tabController != null) {
+      setState(() {
+        _currentIndex = _tabController!.index;
+      });
+      
+      // Clear selection when switching tabs
+      if (ref.read(isMultiSelectModeProvider)) {
+        ref.read(selectedOrdersProvider.notifier).state = <String>{};
+        ref.read(isMultiSelectModeProvider.notifier).state = false;
+      }
+    }
+  }
+
+  // Load data only once when entering the screen
+  void _loadDataOnce() {
+    final dataLoaded = ref.read(dataLoadedProvider);
+    
+    if (!dataLoaded) {
+      // Fetch both orders and shipments simultaneously
+      Future.wait([
+        ref.read(ordersNotifierProvider.notifier).getAll(
+          page: 1,
+          queryParams: _currentFilter?.toJson(),
+        ),
+        ref.read(shipmentsNotifierProvider.notifier).getAll(
+          page: 1,
+          queryParams: _currentFilter?.toJson(),
+        ),
+      ]);
+      
+      // Mark data as loaded
+      ref.read(dataLoadedProvider.notifier).state = true;
+    }
   }
 
   @override
@@ -83,14 +114,24 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
     super.didUpdateWidget(oldWidget);
     if (widget.filter != oldWidget.filter) {
       _currentFilter = widget.filter ?? OrderFilter();
-      _fetchInitialData();
+      // Only reload if filter actually changed and reset the data loaded flag
+      ref.read(dataLoadedProvider.notifier).state = false;
+      _loadDataOnce();
     }
   }
 
   @override
   void dispose() {
-    _tabController.removeListener(_onTabChanged);
-    _tabController.dispose();
+    _tabController?.removeListener(_onTabChanged);
+    _tabController?.dispose();
+    // Clear selection and multi-select mode when leaving screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(selectedOrdersProvider.notifier).state = <String>{};
+        ref.read(isMultiSelectModeProvider.notifier).state = false;
+        ref.read(dataLoadedProvider.notifier).state = false;
+      }
+    });
     super.dispose();
   }
 
@@ -107,7 +148,6 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
     });
 
     try {
-      // استخدام البيانات بنفس الشكل المطلوب في API
       final shipmentData = {
         "delivered": false,
         "orders": selectedOrders
@@ -125,8 +165,9 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
         ref.read(selectedOrdersProvider.notifier).state = <String>{};
         ref.read(isMultiSelectModeProvider.notifier).state = false;
         
-        // Refresh data
-        _fetchInitialData();
+        // Force refresh only after successful shipment creation
+        ref.read(dataLoadedProvider.notifier).state = false;
+        _loadDataOnce();
       } else {
         GlobalToast.show(
           message: result.$2 ?? 'فشل في إنشاء الشحنة',
@@ -150,11 +191,18 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
     final isMultiSelectMode = ref.watch(isMultiSelectModeProvider);
     final selectedOrders = ref.watch(selectedOrdersProvider);
 
+    // Show loading until TabController is initialized
+    if (!_isInitialized || _tabController == null) {
+      return const Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return PopScope(
       canPop: !isMultiSelectMode,
       onPopInvoked: (didPop) {
         if (!didPop && isMultiSelectMode) {
-          // Clear selection and exit multi-select mode
           ref.read(selectedOrdersProvider.notifier).state = <String>{};
           ref.read(isMultiSelectModeProvider.notifier).state = false;
         }
@@ -233,6 +281,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
               duration: const Duration(milliseconds: 200),
               child: GestureDetector(
                 onTap: () {
+                  // Toggle multi-select mode without refreshing data
                   ref.read(isMultiSelectModeProvider.notifier).state = !isMultiSelectMode;
                   if (!isMultiSelectMode) {
                     ref.read(selectedOrdersProvider.notifier).state = <String>{};
@@ -343,7 +392,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
           ),
           TextButton(
             onPressed: () {
-              // Get all orders and select them
+              // Get all orders from current state without refreshing
               final ordersState = ref.read(ordersNotifierProvider);
               ordersState.whenData((orders) {
                 final allOrderIds = orders.map((order) => order.id!).toSet();
@@ -360,7 +409,10 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
           ),
           TextButton(
             onPressed: () {
-              ref.read(selectedOrdersProvider.notifier).state = <String>{};
+              ref.read(selectedOrdersProvider.notifier).state = <String>{
+
+                
+              };
             },
             child: Text(
               'إلغاء الكل',
@@ -387,7 +439,9 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
           return Expanded(
             child: GestureDetector(
               onTap: () {
-                _tabController.animateTo(i);
+                if (_tabController != null) {
+                  _tabController!.animateTo(i);
+                }
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
@@ -457,8 +511,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
         label: _isCreatingShipment 
             ? 'جاري إنشاء الشحنة...' 
             : 'إنشاء شحنة (${selectedOrders.length})',
-        onPressed:  _createShipment,
-        isLoading: _isCreatingShipment,
+        onPressed: _createShipment,
         icon: _isCreatingShipment
             ? const SizedBox(
                 width: 20,

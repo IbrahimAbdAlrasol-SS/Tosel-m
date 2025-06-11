@@ -13,8 +13,6 @@ import 'package:Tosell/Features/orders/models/order_enum.dart';
 import 'package:Tosell/Features/orders/models/OrderFilter.dart';
 import 'package:Tosell/Features/orders/widgets/order_card_item.dart';
 import 'package:Tosell/Features/orders/providers/orders_provider.dart';
-
-// Import the providers from the main orders screen
 import 'package:Tosell/Features/orders/screens/orders_screen.dart';
 
 class OrdersListTab extends ConsumerStatefulWidget {
@@ -25,8 +23,12 @@ class OrdersListTab extends ConsumerStatefulWidget {
   ConsumerState<ConsumerStatefulWidget> createState() => _OrdersListTabState();
 }
 
-class _OrdersListTabState extends ConsumerState<OrdersListTab> {
+class _OrdersListTabState extends ConsumerState<OrdersListTab> 
+    with AutomaticKeepAliveClientMixin {
   late OrderFilter? _currentFilter;
+
+  @override
+  bool get wantKeepAlive => true; // Keep state alive to prevent rebuilds
 
   @override
   void initState() {
@@ -37,6 +39,7 @@ class _OrdersListTabState extends ConsumerState<OrdersListTab> {
   @override
   void didUpdateWidget(covariant OrdersListTab oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Only update if filter actually changed
     if (widget.filter != oldWidget.filter) {
       _currentFilter = widget.filter ?? OrderFilter();
     }
@@ -44,6 +47,8 @@ class _OrdersListTabState extends ConsumerState<OrdersListTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
+    
     final ordersState = ref.watch(ordersNotifierProvider);
     final isMultiSelectMode = ref.watch(isMultiSelectModeProvider);
 
@@ -78,7 +83,35 @@ class _OrdersListTabState extends ConsumerState<OrdersListTab> {
                 child: Center(child: CircularProgressIndicator()),
               ),
               error: (err, _) => Expanded(
-                child: Center(child: Text(err.toString())),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        color: Theme.of(context).colorScheme.error,
+                        size: 48,
+                      ),
+                      const Gap(AppSpaces.medium),
+                      Text(
+                        'حدث خطأ في تحميل البيانات',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Gap(AppSpaces.small),
+                      Text(
+                        err.toString(),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.secondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
@@ -88,11 +121,21 @@ class _OrdersListTabState extends ConsumerState<OrdersListTab> {
   }
 
   Expanded _buildUi(List<Order> data, bool isMultiSelectMode) {
+    // Use stable key to prevent unnecessary rebuilds
     return Expanded(
       child: GenericPagedListView(
-        key: ValueKey('${widget.filter?.toJson()}_$isMultiSelectMode'),
+        key: ValueKey('orders_${widget.filter?.toJson()}_stable'),
         noItemsFoundIndicatorBuilder: _buildNoItemsFound(),
         fetchPage: (pageKey, _) async {
+          // Only fetch if it's the first page and we need more data
+          if (pageKey == 1 && data.isNotEmpty) {
+            // Return existing data without making new API call
+            return ref.read(ordersNotifierProvider.notifier).getAll(
+              page: pageKey,
+              queryParams: _currentFilter?.toJson(),
+            );
+          }
+          
           return await ref.read(ordersNotifierProvider.notifier).getAll(
             page: pageKey,
             queryParams: _currentFilter?.toJson(),
@@ -163,7 +206,7 @@ class _OrdersListTabState extends ConsumerState<OrdersListTab> {
   }
 }
 
-// Enhanced Order Card Item with multi-select support
+// Enhanced Order Card Item with optimized performance
 class EnhancedOrderCardItem extends ConsumerWidget {
   final Order order;
   final bool isMultiSelectMode;
@@ -233,9 +276,7 @@ class EnhancedOrderCardItem extends ConsumerWidget {
                             "assets/svg/box.svg",
                             width: 24,
                             height: 24,
-                            color: isSelected
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.primary,
+                            color: theme.colorScheme.primary,
                           ),
                         ),
                         

@@ -12,7 +12,6 @@ import 'package:Tosell/Features/orders/models/Order.dart';
 import 'package:Tosell/Features/orders/models/OrderFilter.dart';
 import 'package:Tosell/Features/orders/models/order_enum.dart';
 import 'package:Tosell/Features/orders/widgets/order_card_item.dart';
-import 'package:Tosell/Features/orders/providers/orders_provider.dart';
 import 'package:Tosell/Features/orders/services/orders_service.dart';
 
 class ShipmentOrdersScreen extends ConsumerStatefulWidget {
