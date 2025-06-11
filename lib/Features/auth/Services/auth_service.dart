@@ -134,57 +134,37 @@ class AuthService {
       print('   - طول brandName: ${brandName.length} حرف');
 
       // ✅ إرسال الطلب
-      print('🌐 إرسال الطلب إلى /auth/merchant-register...');
       var result = await baseClient.create(
         endpoint: '/auth/merchant-register',
         data: requestData,
       );
 
-      print('📨 استجابة الباك اند:');
-      print('📊 كود الحالة: ${result.code}');
-      print('💬 الرسالة: ${result.message}');
-      
-      // ✅ طباعة مفصلة للاستجابة
-      print('📋 تحليل الاستجابة:');
-      print('   - data (List): ${result.data?.length ?? 0} عنصر');
-      print('   - singleData: ${result.singleData != null ? 'موجودة' : 'غير موجودة'}');
-      print('   - pagination: ${result.pagination != null ? 'موجودة' : 'غير موجودة'}');
-      print('   - errors: ${result.errors}');
+    
 
-      // ✅ التعامل الصحيح مع الاستجابة
+      
       if (result.code == 200 && result.message == "Operation successful") {
-        print('✅ AuthService: تم التسجيل بنجاح - في انتظار التفعيل الإداري');
         
         // ✅ إرجاع حالة خاصة للتمييز
         return (null, "REGISTRATION_SUCCESS_PENDING_APPROVAL");
       }
       
-      // ✅ البحث عن بيانات المستخدم في الاستجابة (في حالة وجودها)
       User? user;
       if (result.singleData != null) {
         user = result.singleData;
-        print('✅ تم العثور على المستخدم في singleData');
-        print('👤 بيانات المستخدم:');
         
-        print('✅ AuthService: نجح التسجيل كاملاً - ');
         return (user, null);
         
       } else if (result.data != null && result.data!.isNotEmpty) {
         user = result.data!.first;
-        print('✅ تم العثور على المستخدم في data[0]');
-        print('👤 بيانات المستخدم: ${user.toJson()}');
+      
         
-        print('✅ AuthService: نجح التسجيل كاملاً - ${user.fullName}');
         return (user, null);
       }
 
-      // ✅ حالة أخرى: رسالة من الباك اند
-      print('⚠️ AuthService: استجابة غير متوقعة');
       return (null, result.message ?? 'استجابة غير متوقعة من الخادم');
       
     } catch (e) {
-      print('💥 AuthService Exception: $e');
-      print('📍 Stack trace: ${StackTrace.current}');
+     
       return (null, 'خطأ في التسجيل: ${e.toString()}');
     }
   }

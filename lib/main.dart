@@ -15,8 +15,8 @@ Future<void> main() async {
   HttpOverrides.global = MyHttpOverrides();
   var token = (await SharedPreferencesHelper.getUser())?.token;
   token == null
-      ? initialLocation = AppRoutes.registerScreen
-      : initialLocation = AppRoutes.registerScreen;
+      ? initialLocation = AppRoutes.login
+      : initialLocation = AppRoutes.home;
 
   runApp(
     ProviderScope(

@@ -1,45 +1,49 @@
 import 'package:Tosell/Features/orders/models/Shipment.dart';
 import 'package:Tosell/core/Client/BaseClient.dart';
 import 'package:Tosell/core/Client/ApiResponse.dart';
-
 class ShipmentsService {
-  final BaseClient<Shipment> baseClient;
-
+  final BaseClient<Shipment> _baseClient;
   ShipmentsService()
-      : baseClient =
-            BaseClient<Shipment>(fromJson: (json) => Shipment.fromJson(json));
-
-  Future<ApiResponse<Shipment>> getAll(
-      {int page = 1, Map<String, dynamic>? queryParams}) async {
+      : _baseClient = BaseClient<Shipment>(
+          fromJson: (json) => Shipment.fromJson(json),
+        );
+  Future<ApiResponse<Shipment>> getAll({
+    int page = 1, 
+    Map<String, dynamic>? queryParams,
+  }) async {
     try {
-      var result = await baseClient.getAll(
-          endpoint: '/shipment/merchant/my-shipments',
-          page: page,
-          queryParams: queryParams);
+      final result = await _baseClient.getAll(
+        endpoint: '/shipment/merchant/my-shipments',
+        page: page,
+        queryParams: queryParams,
+      );
       return result;
     } catch (e) {
+
       rethrow;
     }
   }
-
   Future<Shipment?> getShipmentById(String shipmentId) async {
     try {
-      var result =
-          await baseClient.getById(endpoint: '/shipment', id: shipmentId);
+      final result = await _baseClient.getById(
+        endpoint: '/api/shipment',
+        id: shipmentId,
+      );
       return result.singleData;
     } catch (e) {
-      print('Error fetching shipment by ID: $e');
       return null;
     }
   }
-
-  Future<(Shipment?, String?)> createShipment(
-      Shipment shipmentData) async {
+  Future<(Shipment?, String?)> createPickupShipment(
+    Map<String, dynamic> shipmentData,
+  ) async {
     try {
-      var result = await baseClient.create(
-          endpoint: '/shipment/pick-up', data: shipmentData.toJson());
+      final result = await _baseClient.create(
+        endpoint: '/shipment/pick-up',
+        data: shipmentData,
+      );
 
-      if (result.code == 200 || result.code == 201) {
+      if (_isSuccessResponse(result.code)) {
         return (result.singleData, null);
       } else {
         return (null, result.message ?? 'فشل في إنشاء الشحنة');
@@ -48,34 +52,55 @@ class ShipmentsService {
       return (null, e.toString());
     }
   }
+  Future<(Shipment?, String?)> createShipment(Shipment shipment) async {
+    try {
+      final result = await _baseClient.create(
+        endpoint: '/shipment/pick-up',
+        data: shipment.toJson(),
+      );
 
-  Future<(Shipment?, String?)> createPickupShipment(
-      Map<String, dynamic> shipmentData) async {
-   
-      
-      var result = await baseClient.create(
-          endpoint: '/shipment/pick-up', data: shipmentData);
-
-    
-
-      if (result.code == 200 || result.code == 201) {
+      if (_isSuccessResponse(result.code)) {
         return (result.singleData, null);
       } else {
         return (null, result.message ?? 'فشل في إنشاء الشحنة');
       }
-  
+    } catch (e) {
+      return (null, e.toString());
+    }
   }
-
   Future<ApiResponse<dynamic>> getShipmentOrders({
     required String shipmentId,
     int page = 1,
   }) async {
-   
-      var result = await BaseClient().getAll(
-        endpoint: '/shipment/$shipmentId',
+    try {
+      final result = await BaseClient().getAll(
+        endpoint: '/shipment/$shipmentId/orders', // ✅ تحسين endpoint
         page: page,
       );
       return result;
-   
+    } catch (e) {
+      rethrow;
+    }
+  }
+  Future<(Shipment?, String?)> updateShipmentStatus({
+    required String shipmentId,
+    required int newStatus,
+  }) async {
+    try {
+      final result = await _baseClient.update(
+        endpoint: '/shipment/$shipmentId/status',
+        data: {'status': newStatus},
+      );
+      if (_isSuccessResponse(result.code)) {
+        return (result.singleData, null);
+      } else {
+        return (null, result.message ?? 'فشل في تحديث حالة الشحنة');
+      }
+    } catch (e) {
+      return (null, e.toString());
+    }
+  }
+  bool _isSuccessResponse(int? code) {
+    return code == 200 || code == 201;
   }
 }
