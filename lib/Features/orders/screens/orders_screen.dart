@@ -22,7 +22,7 @@ import 'package:Tosell/Features/orders/providers/shipments_provider.dart';
 import 'package:Tosell/Features/orders/services/shipments_service.dart';
 import 'package:Tosell/core/utils/GlobalToast.dart';
 
-// ✅ Simplified Global Providers
+// ✅ Global Providers for Multi-Select
 final selectedOrdersProvider = StateProvider<Set<String>>((ref) => <String>{});
 final isMultiSelectModeProvider = StateProvider<bool>((ref) => false);
 
@@ -95,9 +95,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
 
     try {
       final shipmentData = {
-        "delivered": false,
         "orders": selectedOrders.map((id) => {"orderId": id}).toList(),
-        "priority": 0
       };
 
       final result = await _shipmentsService.createPickupShipment(shipmentData);
@@ -197,12 +195,13 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
                           ref.read(isMultiSelectModeProvider.notifier).state = !current;
                           if (current) _clearMultiSelect();
                         },
-                        child: Container(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
                           width: 50,
                           height: 50,
                           decoration: BoxDecoration(
                             color: isMultiSelectMode
-                                ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                                ? Theme.of(context).colorScheme.primary
                                 : Colors.white,
                             shape: BoxShape.circle,
                             border: Border.all(
@@ -210,10 +209,19 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
                                   ? Theme.of(context).colorScheme.primary
                                   : Theme.of(context).colorScheme.outline,
                             ),
+                            boxShadow: isMultiSelectMode ? [
+                              BoxShadow(
+                                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                                blurRadius: 8,
+                                spreadRadius: 2,
+                              )
+                            ] : null,
                           ),
                           child: Icon(
-                            isMultiSelectMode ? Icons.close : Icons.checklist,
-                            color: Theme.of(context).colorScheme.primary,
+                            isMultiSelectMode ? Icons.close : Icons.checklist_rounded,
+                            color: isMultiSelectMode 
+                                ? Colors.white 
+                                : Theme.of(context).colorScheme.primary,
                             size: 24,
                           ),
                         ),
@@ -256,20 +264,83 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
                         margin: const EdgeInsets.symmetric(horizontal: 16),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          gradient: LinearGradient(
+                            colors: [
+                              Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                              Theme.of(context).colorScheme.primary.withOpacity(0.05),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                          ),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.checklist, color: Theme.of(context).colorScheme.primary),
-                            const Gap(AppSpaces.small),
-                            Expanded(child: Text('تم تحديد ${selectedOrders.length} طلب')),
-                            TextButton(onPressed: _selectAllOrders, child: const Text('تحديد الكل')),
-                            TextButton(
-                              onPressed: () => ref.read(selectedOrdersProvider.notifier).state = <String>{},
-                              child: const Text('إلغاء الكل'),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.checklist_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
                             ),
-                            IconButton(onPressed: _clearMultiSelect, icon: const Icon(Icons.close)),
+                            const Gap(AppSpaces.medium),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'وضع التحديد المتعدد',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).colorScheme.primary,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  Text(
+                                    'تم تحديد ${selectedOrders.length} طلب',
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.secondary,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: _selectAllOrders,
+                              icon: const Icon(Icons.select_all, size: 18),
+                              label: const Text('تحديد الكل'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Theme.of(context).colorScheme.primary,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: () => ref.read(selectedOrdersProvider.notifier).state = <String>{},
+                              icon: const Icon(Icons.clear_all, size: 18),
+                              label: const Text('إلغاء الكل'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Theme.of(context).colorScheme.secondary,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                            ),
+                            const Gap(AppSpaces.small),
+                            IconButton(
+                              onPressed: _clearMultiSelect,
+                              icon: const Icon(Icons.close_rounded),
+                              style: IconButton.styleFrom(
+                                backgroundColor: Theme.of(context).colorScheme.error.withOpacity(0.1),
+                                foregroundColor: Theme.of(context).colorScheme.error,
+                              ),
+                            ),
                           ],
                         ),
                       )
@@ -308,33 +379,102 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
                       topLeft: Radius.circular(20),
                       topRight: Radius.circular(20),
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _clearMultiSelect,
-                          child: const Text('إلغاء'),
-                        ),
-                      ),
-                      const Gap(AppSpaces.medium),
-                      Expanded(
-                        flex: 2,
-                        child: FillButton(
-                          label: _isCreatingShipment
-                              ? 'جاري إنشاء الشحنة...'
-                              : 'إنشاء شحنة (${selectedOrders.length})',
-                          onPressed: _createShipment,
-                          icon: _isCreatingShipment
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
-                                )
-                              : const Icon(Icons.local_shipping, color: Colors.white),
-                        ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                        offset: const Offset(0, -2),
                       ),
                     ],
+                  ),
+                  child: SafeArea(
+                    top: false,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _clearMultiSelect,
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              side: BorderSide(
+                                color: Theme.of(context).colorScheme.outline,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('إلغاء'),
+                          ),
+                        ),
+                        const Gap(AppSpaces.medium),
+                        Expanded(
+                          flex: 2,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              gradient: LinearGradient(
+                                colors: [
+                                  Theme.of(context).colorScheme.primary,
+                                  Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  spreadRadius: 2,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: _isCreatingShipment ? null : _createShipment,
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      if (_isCreatingShipment)
+                                        const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                          ),
+                                        )
+                                      else
+                                        const Icon(
+                                          Icons.local_shipping_rounded,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                      const Gap(AppSpaces.small),
+                                      Text(
+                                        _isCreatingShipment
+                                            ? 'جاري إنشاء الشحنة...'
+                                            : 'إنشاء شحنة (${selectedOrders.length})',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
             ],

@@ -13,10 +13,7 @@ import 'package:Tosell/Features/orders/models/order_enum.dart';
 import 'package:Tosell/Features/orders/models/OrderFilter.dart';
 import 'package:Tosell/Features/orders/widgets/order_card_item.dart';
 import 'package:Tosell/Features/orders/providers/orders_provider.dart';
-
-// ✅ Simplified providers
-final selectedOrdersProvider = StateProvider<Set<String>>((ref) => <String>{});
-final isMultiSelectModeProvider = StateProvider<bool>((ref) => false);
+import 'package:Tosell/Features/orders/screens/orders_screen.dart';
 
 class OrdersListTab extends ConsumerStatefulWidget {
   final OrderFilter? filter;
@@ -219,80 +216,12 @@ class _OrdersListTabState extends ConsumerState<OrdersListTab> {
     final isSelected = selectedOrders.contains(order.id);
     final canSelect = _canSelectOrder(order);
     
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isMultiSelectMode && isSelected
-              ? Theme.of(context).colorScheme.primary
-              : Colors.transparent,
-          width: 2,
-        ),
-      ),
-      child: Stack(
-        children: [
-          // Main order card
-          GestureDetector(
-            onTap: () => _handleOrderTap(order),
-            onLongPress: canSelect ? () => _handleOrderLongPress(order) : null,
-            child: AbsorbPointer(
-              absorbing: isMultiSelectMode,
-              child: OrderCardItem(order: order, onTap: () {}),
-            ),
-          ),
-          
-          // Selection indicator
-          if (isMultiSelectMode)
-            Positioned(
-              top: 8,
-              right: 8,
-              child: GestureDetector(
-                onTap: canSelect ? () => _toggleOrderSelection(order.id ?? '') : null,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isSelected 
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.white,
-                    border: Border.all(
-                      color: isSelected 
-                          ? Theme.of(context).colorScheme.primary
-                          : canSelect
-                              ? Theme.of(context).colorScheme.outline
-                              : Theme.of(context).colorScheme.outline.withOpacity(0.5),
-                      width: 2,
-                    ),
-                  ),
-                  child: isSelected
-                      ? const Icon(Icons.check, size: 18, color: Colors.white)
-                      : canSelect
-                          ? null
-                          : Icon(
-                              Icons.block,
-                              size: 18,
-                              color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
-                            ),
-                ),
-              ),
-            ),
-            
-          // Non-selectable overlay
-          if (isMultiSelectMode && !canSelect)
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-        ],
-      ),
+    return OrderCardItem(
+      order: order,
+      isMultiSelectMode: isMultiSelectMode,
+      isSelected: isSelected && isMultiSelectMode,
+      onTap: canSelect ? () => _handleOrderTap(order) : null,
+      onSelectionToggle: canSelect && isMultiSelectMode ? () => _toggleOrderSelection(order.id ?? '') : null,
     );
   }
 
