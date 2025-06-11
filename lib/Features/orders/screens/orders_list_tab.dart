@@ -27,7 +27,13 @@ class OrdersListTab extends ConsumerStatefulWidget {
   ConsumerState<OrdersListTab> createState() => _OrdersListTabState();
 }
 
-class _OrdersListTabState extends ConsumerState<OrdersListTab> {
+class _OrdersListTabState extends ConsumerState<OrdersListTab> 
+    with AutomaticKeepAliveClientMixin {
+  
+  // ✅ Keep state alive to maintain multi-select state
+  @override
+  bool get wantKeepAlive => true;
+  
   // ✅ Current filter - updated from parent screen
   late OrderFilter _currentFilter;
 
@@ -35,6 +41,32 @@ class _OrdersListTabState extends ConsumerState<OrdersListTab> {
   void initState() {
     super.initState();
     _currentFilter = widget.filter ?? OrderFilter();
+    
+    // ✅ Listen to provider state changes for cleanup
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setupProviderListeners();
+    });
+  }
+
+  /// ✅ Setup listeners for provider state changes
+  void _setupProviderListeners() {
+    // Listen to orders provider errors to clear multi-select
+    ref.listen(ordersNotifierProvider, (previous, next) {
+      next.whenOrNull(
+        error: (error, stackTrace) {
+          // Clear multi-select on error
+          _clearMultiSelectMode();
+        },
+      );
+    });
+  }
+
+  /// ✅ Centralized method to clear multi-select mode
+  void _clearMultiSelectMode() {
+    if (mounted) {
+      ref.read(selectedOrdersProvider.notifier).state = <String>{};
+      ref.read(isMultiSelectModeProvider.notifier).state = false;
+    }
   }
 
   @override
@@ -44,6 +76,9 @@ class _OrdersListTabState extends ConsumerState<OrdersListTab> {
     // ✅ Update filter when parent changes it
     if (widget.filter != oldWidget.filter) {
       _currentFilter = widget.filter ?? OrderFilter();
+      
+      // ✅ Clear multi-select when filter changes
+      _clearMultiSelectMode();
     }
   }
 
@@ -61,6 +96,30 @@ class _OrdersListTabState extends ConsumerState<OrdersListTab> {
     ref.read(selectedOrdersProvider.notifier).state = newSelection;
   }
 
+  /// ✅ Handle order tap with multi-select logic
+  void _handleOrderTap(Order order) {
+    final isMultiSelectMode = ref.read(isMultiSelectModeProvider);
+    
+    if (isMultiSelectMode) {
+      // In multi-select mode, toggle selection
+      _toggleOrderSelection(order.id ?? '');
+    } else {
+      // Normal mode, navigate to details
+      if (order.code != null) {
+        context.push(AppRoutes.orderDetails, extra: order.code);
+      }
+    }
+  }
+
+  /// ✅ Handle long press to enter multi-select mode
+  void _handleOrderLongPress(Order order) {
+    if (!ref.read(isMultiSelectModeProvider)) {
+      // Enter multi-select mode and select this item
+      ref.read(isMultiSelectModeProvider.notifier).state = true;
+      ref.read(selectedOrdersProvider.notifier).state = {order.id ?? ''};
+    }
+  }
+
   /// ✅ Get section title based on current filter
   String _getSectionTitle() {
     if (_currentFilter.status != null && _currentFilter.status! < orderStatus.length) {
@@ -73,8 +132,17 @@ class _OrdersListTabState extends ConsumerState<OrdersListTab> {
     }
   }
 
+  /// ✅ Check if order can be selected (add business logic here if needed)
+  bool _canSelectOrder(Order order) {
+    // Add any business logic to determine if order can be selected
+    // For example, only allow selection of certain status orders
+    return order.id != null && order.status != null;
+  }
+
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
+    
     final ordersState = ref.watch(ordersNotifierProvider);
     final isMultiSelectMode = ref.watch(isMultiSelectModeProvider);
     final selectedOrders = ref.watch(selectedOrdersProvider);
@@ -86,10 +154,14 @@ class _OrdersListTabState extends ConsumerState<OrdersListTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ✅ Section title with orders count
-            _buildSectionTitle(ordersState),
+            // ✅ Section title with orders count and multi-select info
+            _buildSectionTitle(ordersState, isMultiSelectMode),
             
             const Gap(AppSpaces.small),
+            
+            // ✅ Multi-select helper text
+            if (isMultiSelectMode)
+              _buildMultiSelectHelperText(),
             
             // ✅ Orders list
             Expanded(
@@ -105,40 +177,106 @@ class _OrdersListTabState extends ConsumerState<OrdersListTab> {
     );
   }
 
-  /// ✅ Build section title with orders count
-  Widget _buildSectionTitle(AsyncValue<List<Order>> ordersState) {
+  /// ✅ Build section title with orders count and multi-select status
+  Widget _buildSectionTitle(AsyncValue<List<Order>> ordersState, bool isMultiSelectMode) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: ordersState.when(
-        data: (orders) {
-          final filteredCount = orders.length;
-          return Text(
-            '${_getSectionTitle()} ($filteredCount)',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+      child: Row(
+        children: [
+          Expanded(
+            child: ordersState.when(
+              data: (orders) {
+                final filteredCount = orders.length;
+                final selectableCount = orders.where(_canSelectOrder).length;
+                
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${_getSectionTitle()} ($filteredCount)',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (isMultiSelectMode && selectableCount > 0)
+                      Text(
+                        'يمكن تحديد $selectableCount طلب',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
+                      ),
+                  ],
+                );
+              },
+              loading: () => Text(
+                '${_getSectionTitle()} (جاري التحميل...)',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              error: (_, __) => Text(
+                _getSectionTitle(),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-          );
-        },
-        loading: () => Text(
-          '${_getSectionTitle()} (جاري التحميل...)',
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
           ),
-        ),
-        error: (_, __) => Text(
-          _getSectionTitle(),
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+          
+          // ✅ Quick exit multi-select button
+          if (isMultiSelectMode)
+            IconButton(
+              onPressed: _clearMultiSelectMode,
+              icon: Icon(
+                Icons.close,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              tooltip: 'إلغاء التحديد',
+            ),
+        ],
       ),
     );
   }
 
-  /// ✅ Build orders list with multi-select support
+  /// ✅ Build multi-select helper text
+  Widget _buildMultiSelectHelperText() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.info_outline,
+            size: 16,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          const Gap(AppSpaces.small),
+          Expanded(
+            child: Text(
+              'اضغط على الطلبات لتحديدها، أو اضغط مطولاً على أي طلب للدخول في وضع التحديد',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ✅ Build orders list with enhanced multi-select support
   Widget _buildOrdersList(
     List<Order> orders, 
     bool isMultiSelectMode, 
@@ -162,16 +300,18 @@ class _OrdersListTabState extends ConsumerState<OrdersListTab> {
         selectedOrders
       ),
       noItemsFoundIndicatorBuilder: _buildNoItemsFound(),
+     
     );
   }
 
-  /// ✅ Build individual order item with selection support
+  /// ✅ Build individual order item with enhanced selection support
   Widget _buildOrderItem(
     Order order, 
     bool isMultiSelectMode, 
     Set<String> selectedOrders
   ) {
     final isSelected = selectedOrders.contains(order.id);
+    final canSelect = _canSelectOrder(order);
     
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -187,12 +327,17 @@ class _OrdersListTabState extends ConsumerState<OrdersListTab> {
       ),
       child: Stack(
         children: [
-          // ✅ Main order card
-          OrderCardItem(
-            order: order,
-            onTap: isMultiSelectMode 
-                ? () => _toggleOrderSelection(order.id ?? '')
-                : () => context.push(AppRoutes.orderDetails, extra: order.code),
+          // ✅ Main order card with enhanced interaction
+          GestureDetector(
+            onTap: () => _handleOrderTap(order),
+            onLongPress: canSelect ? () => _handleOrderLongPress(order) : null,
+            child: AbsorbPointer(
+              absorbing: isMultiSelectMode, // Prevent card's internal taps in multi-select
+              child: OrderCardItem(
+                order: order,
+                onTap: () {}, // Empty since we handle tap above
+              ),
+            ),
           ),
           
           // ✅ Selection indicator in multi-select mode
@@ -200,29 +345,51 @@ class _OrdersListTabState extends ConsumerState<OrdersListTab> {
             Positioned(
               top: 8,
               right: 8,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isSelected 
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.white,
-                  border: Border.all(
+              child: GestureDetector(
+                onTap: canSelect ? () => _toggleOrderSelection(order.id ?? '') : null,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
                     color: isSelected 
                         ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.outline,
-                    width: 2,
+                        : Colors.white,
+                    border: Border.all(
+                      color: isSelected 
+                          ? Theme.of(context).colorScheme.primary
+                          : canSelect
+                              ? Theme.of(context).colorScheme.outline
+                              : Theme.of(context).colorScheme.outline.withOpacity(0.5),
+                      width: 2,
+                    ),
                   ),
+                  child: isSelected
+                      ? const Icon(
+                          Icons.check,
+                          size: 18,
+                          color: Colors.white,
+                        )
+                      : canSelect
+                          ? null
+                          : Icon(
+                              Icons.block,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+                            ),
                 ),
-                child: isSelected
-                    ? const Icon(
-                        Icons.check,
-                        size: 16,
-                        color: Colors.white,
-                      )
-                    : null,
+              ),
+            ),
+            
+          // ✅ Non-selectable overlay
+          if (isMultiSelectMode && !canSelect)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
         ],
@@ -230,7 +397,7 @@ class _OrdersListTabState extends ConsumerState<OrdersListTab> {
     );
   }
 
-  /// ✅ Build error state
+  /// ✅ Build error state with multi-select clearing
   Widget _buildErrorState(String error) {
     return Center(
       child: Column(
@@ -262,9 +429,8 @@ class _OrdersListTabState extends ConsumerState<OrdersListTab> {
           FillButton(
             label: 'إعادة المحاولة',
             onPressed: () {
-              // ✅ Retry loading via provider
-              ref.read(ordersNotifierProvider.notifier).refresh(
-                queryParams: _currentFilter.toJson(),
+              _clearMultiSelectMode();
+              ref.read(ordersNotifierProvider.notifier).getAll(
               );
             },
           ),
@@ -308,7 +474,11 @@ class _OrdersListTabState extends ConsumerState<OrdersListTab> {
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: FillButton(
               label: 'إضافة أول طلب',
-              onPressed: () => context.push(AppRoutes.addOrder),
+              onPressed: () {
+                // ✅ Clear multi-select before navigation
+                _clearMultiSelectMode();
+                context.push(AppRoutes.addOrder);
+              },
               icon: SvgPicture.asset(
                 'assets/svg/navigation_add.svg',
                 color: const Color(0xffFAFEFD)
@@ -319,5 +489,16 @@ class _OrdersListTabState extends ConsumerState<OrdersListTab> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    // ✅ Clear multi-select when disposing
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _clearMultiSelectMode();
+      }
+    });
+    super.dispose();
   }
 }

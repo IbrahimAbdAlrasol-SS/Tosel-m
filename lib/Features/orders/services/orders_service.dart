@@ -38,22 +38,19 @@ class OrdersService {
     }
   }
 
-  Future<Order?> getOrderByCode({required String code}) async {
+  Future<Order?>? getOrderByCode({required String code}) async {
     try {
-      final result = await _baseClient.getById(
-        endpoint: '/order',
-        id: code,
-      );
+      var result = await _baseClient.getById(endpoint: '/order', id: code);
       return result.singleData;
     } catch (e) {
-      return null;
+      rethrow;
     }
   }
 
   Future<bool> validateCode({required String code}) async {
     try {
       final result = await BaseClient<bool>().get(
-        endpoint: '/order/$code/available', // ✅ إصلاح endpoint
+        endpoint: '/order/$code/available', 
       );
       return result.singleData ?? false;
     } catch (e) {
@@ -62,54 +59,16 @@ class OrdersService {
     }
   }
 
-  Future<(Order?, String?)> addOrder({
-    required AddOrderForm orderForm,
-  }) async {
+ Future<(Order? order, String? error)> addOrder(
+      {required AddOrderForm orderForm}) async {
     try {
-      final result = await _baseClient.create(
-        endpoint: '/order',
-        data: orderForm.toJson(),
-      );
-
-      if (result.singleData == null) {
-        return (null, result.message ?? 'فشل في إنشاء الطلب');
-      }
+      var result =
+          await _baseClient.create(endpoint: '/order', data: orderForm.toJson());
+      if (result.singleData == null) return (null, result.message);
 
       return (result.singleData, null);
     } catch (e) {
-      return (null, e.toString());
-    }
-  }
-
-  Future<ApiResponse<Order>> searchOrders({
-    required String searchTerm,
-    int page = 1,
-  }) async {
-    try {
-      final queryParams = {
-        'search': searchTerm,
-      };
-
-      final result = await _baseClient.getAll(
-        endpoint: '/order/merchant/search',
-        page: page,
-        queryParams: queryParams,
-      );
-      return result;
-    } catch (e) {
       rethrow;
-    }
-  }
-
-  Future<Order?> getOrderDetails({required String orderId}) async {
-    try {
-      final result = await _baseClient.getById(
-        endpoint: '/order/details',
-        id: orderId,
-      );
-      return result.singleData;
-    } catch (e) {
-      return null;
     }
   }
 }

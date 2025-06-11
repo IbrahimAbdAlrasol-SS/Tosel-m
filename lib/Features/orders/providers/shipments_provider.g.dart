@@ -6,7 +6,7 @@ part of 'shipments_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$shipmentsNotifierHash() => r'3403779bfe7bc067a2a51050751b9e7bd21fc2f5';
+String _$shipmentsNotifierHash() => r'607d2d4fa6bf6c0cdf29fb4a3f32ce6192814e07';
 
 /// 🎯 Provider Layer - إدارة حالة الشحنات
 /// ✅ المسؤوليات:
@@ -205,11 +205,5 @@ class _FilteredShipmentsNotifierProviderElement
   String get searchTerm =>
       (origin as FilteredShipmentsNotifierProvider).searchTerm;
 }
-String _$shipmentsStatisticsNotifierHash() =>
-    r'd3bc7de5397e100464f42266994e5c08b4fe6665';
-
-
-typedef _$ShipmentsStatisticsNotifier
-    = AutoDisposeAsyncNotifier<Map<String, dynamic>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

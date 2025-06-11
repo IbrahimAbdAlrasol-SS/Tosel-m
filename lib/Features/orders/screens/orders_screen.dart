@@ -42,7 +42,7 @@ class OrdersScreen extends ConsumerStatefulWidget {
 }
 
 class _OrdersScreenState extends ConsumerState<OrdersScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   // ✅ UI State Variables
   late TabController _tabController;
   late OrderFilter _currentFilter;
@@ -61,6 +61,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeState();
   }
 
@@ -84,18 +85,35 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
     });
   }
 
-  /// ✅ Handle tab changes without reloading data
+  /// ✅ Handle app lifecycle changes
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    // Clear multi-select when app goes to background
+    if (state == AppLifecycleState.paused || 
+        state == AppLifecycleState.inactive) {
+      _clearMultiSelectMode();
+    }
+  }
+
+  /// ✅ Handle tab changes and clear multi-select
   void _onTabChanged() {
     if (_tabController.indexIsChanging) {
       setState(() {
         _currentTabIndex = _tabController.index;
       });
 
-      // Clear multi-select mode when switching tabs
-      if (ref.read(isMultiSelectModeProvider)) {
-        ref.read(selectedOrdersProvider.notifier).state = <String>{};
-        ref.read(isMultiSelectModeProvider.notifier).state = false;
-      }
+      // ✅ Always clear multi-select mode when switching tabs
+      _clearMultiSelectMode();
+    }
+  }
+
+  /// ✅ Centralized method to clear multi-select mode
+  void _clearMultiSelectMode() {
+    if (mounted) {
+      ref.read(selectedOrdersProvider.notifier).state = <String>{};
+      ref.read(isMultiSelectModeProvider.notifier).state = false;
     }
   }
 
@@ -105,6 +123,9 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
     
     if (!dataLoaded) {
       try {
+        // ✅ Clear multi-select before loading data
+        _clearMultiSelectMode();
+        
         // ✅ Load both orders and shipments in parallel
         await Future.wait([
           _loadOrdersData(),
@@ -114,6 +135,9 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
         // Mark data as loaded to prevent reload on tab switches
         ref.read(dataLoadedProvider.notifier).state = true;
       } catch (e) {
+        // ✅ Clear multi-select on error
+        _clearMultiSelectMode();
+        
         GlobalToast.show(
           message: 'خطأ في تحميل البيانات: ${e.toString()}',
           backgroundColor: Colors.red,
@@ -138,8 +162,11 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
     );
   }
 
-  /// ✅ Handle search for active tab
+  /// ✅ Handle search for active tab with multi-select clearing
   void _handleSearch(String searchTerm) {
+    // ✅ Clear multi-select when searching
+    _clearMultiSelectMode();
+    
     if (_currentTabIndex == 0) {
       // Orders search
       ref.read(ordersSearchProvider.notifier).state = searchTerm;
@@ -180,6 +207,9 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
     
     // ✅ Only reload if filter actually changed
     if (widget.filter != oldWidget.filter) {
+      // ✅ Clear multi-select when filter changes
+      _clearMultiSelectMode();
+      
       _currentFilter = widget.filter ?? OrderFilter();
       
       // Reset data loaded flag and reload both tabs
@@ -220,9 +250,8 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
       if (result.$1 != null) {
         GlobalToast.showSuccess(message: 'تم إنشاء الشحنة بنجاح');
 
-        // Clear selection and exit multi-select mode
-        ref.read(selectedOrdersProvider.notifier).state = <String>{};
-        ref.read(isMultiSelectModeProvider.notifier).state = false;
+        // ✅ Clear selection and exit multi-select mode
+        _clearMultiSelectMode();
 
         // ✅ Refresh both tabs after successful shipment creation
         await _refreshBothTabs();
@@ -244,8 +273,11 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
     }
   }
 
-  /// ✅ Refresh both tabs data
+  /// ✅ Refresh both tabs data and clear multi-select
   Future<void> _refreshBothTabs() async {
+    // ✅ Clear multi-select before refreshing
+    _clearMultiSelectMode();
+    
     await Future.wait([
       ref.read(ordersNotifierProvider.notifier).refresh(
         queryParams: _currentFilter.toJson(),
@@ -257,8 +289,11 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
     ]);
   }
 
-  /// ✅ Show filter bottom sheet
+  /// ✅ Show filter bottom sheet and clear multi-select
   void _showFilterBottomSheet() {
+    // ✅ Clear multi-select when opening filter
+    _clearMultiSelectMode();
+    
     showModalBottomSheet(
       isScrollControlled: true,
       context: context,
@@ -276,6 +311,21 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
     });
   }
 
+  /// ✅ Handle back navigation with multi-select check
+  Future<bool> _onWillPop() async {
+    final isMultiSelectMode = ref.read(isMultiSelectModeProvider);
+    
+    if (isMultiSelectMode) {
+      // Exit multi-select mode instead of leaving screen
+      _clearMultiSelectMode();
+      return false; // Don't pop the screen
+    }
+    
+    // Clear multi-select when leaving screen
+    _clearMultiSelectMode();
+    return true; // Allow pop
+  }
+
   @override
   Widget build(BuildContext context) {
     final isMultiSelectMode = ref.watch(isMultiSelectModeProvider);
@@ -283,10 +333,9 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
 
     return PopScope(
       canPop: !isMultiSelectMode,
-      onPopInvoked: (didPop) {
-        if (!didPop && isMultiSelectMode) {
-          ref.read(selectedOrdersProvider.notifier).state = <String>{};
-          ref.read(isMultiSelectModeProvider.notifier).state = false;
+      onPopInvoked: (didPop) async {
+        if (!didPop) {
+          await _onWillPop();
         }
       },
       child: Scaffold(
@@ -379,15 +428,18 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
     );
   }
 
-  /// ✅ Build multi-select toggle button
+  /// ✅ Build multi-select toggle button with enhanced management
   Widget _buildMultiSelectToggleButton(bool isMultiSelectMode) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       child: GestureDetector(
         onTap: () {
-          ref.read(isMultiSelectModeProvider.notifier).state = !isMultiSelectMode;
-          if (!isMultiSelectMode) {
-            ref.read(selectedOrdersProvider.notifier).state = <String>{};
+          if (isMultiSelectMode) {
+            // ✅ Exit multi-select mode
+            _clearMultiSelectMode();
+          } else {
+            // ✅ Enter multi-select mode
+            ref.read(isMultiSelectModeProvider.notifier).state = true;
           }
         },
         child: Container(
@@ -465,7 +517,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
     );
   }
 
-  /// ✅ Build multi-select header
+  /// ✅ Build multi-select header with enhanced controls
   Widget _buildMultiSelectHeader(Set<String> selectedOrders) {
     return Container(
       key: const ValueKey('multiselect'),
@@ -515,6 +567,15 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
                 color: Theme.of(context).colorScheme.error,
                 fontWeight: FontWeight.w600,
               ),
+            ),
+          ),
+          // ✅ Exit multi-select button
+          IconButton(
+            onPressed: _clearMultiSelectMode,
+            icon: Icon(
+              Icons.close,
+              color: Theme.of(context).colorScheme.primary,
+              size: 20,
             ),
           ),
         ],
@@ -612,37 +673,65 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
           ),
         ],
       ),
-      child: FillButton(
-        label: _isCreatingShipment
-            ? 'جاري إنشاء الشحنة...'
-            : 'إنشاء شحنة (${selectedOrders.length})',
-        onPressed: _createShipment,
-        icon: _isCreatingShipment
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+      child: Row(
+        children: [
+          // ✅ Cancel button
+          Expanded(
+            child: OutlinedButton(
+              onPressed: _clearMultiSelectMode,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.outline,
                 ),
-              )
-            : const Icon(Icons.local_shipping, color: Colors.white),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('إلغاء'),
+            ),
+          ),
+          
+          const Gap(AppSpaces.medium),
+          
+          // ✅ Create shipment button
+          Expanded(
+            flex: 2,
+            child: FillButton(
+              label: _isCreatingShipment
+                  ? 'جاري إنشاء الشحنة...'
+                  : 'إنشاء شحنة (${selectedOrders.length})',
+              onPressed: _createShipment,
+              icon: _isCreatingShipment
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Icon(Icons.local_shipping, color: Colors.white),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   @override
   void dispose() {
+    // ✅ Clean up observers and controllers
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     _ordersSearchController.dispose();
     _shipmentsSearchController.dispose();
     
-    // Clear state when leaving screen
+    // ✅ Clear state when leaving screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        ref.read(selectedOrdersProvider.notifier).state = <String>{};
-        ref.read(isMultiSelectModeProvider.notifier).state = false;
+        _clearMultiSelectMode();
         ref.read(dataLoadedProvider.notifier).state = false;
         ref.read(ordersSearchProvider.notifier).state = '';
         ref.read(shipmentsSearchProvider.notifier).state = '';
