@@ -51,31 +51,32 @@ class ShipmentsService {
 
   Future<(Shipment?, String?)> createPickupShipment(
       Map<String, dynamic> shipmentData) async {
-   
-      
+    try {
       var result = await baseClient.create(
           endpoint: '/shipment/pick-up', data: shipmentData);
-
-    
 
       if (result.code == 200 || result.code == 201) {
         return (result.singleData, null);
       } else {
         return (null, result.message ?? 'فشل في إنشاء الشحنة');
       }
-  
+    } catch (e) {
+      return (null, e.toString());
+    }
   }
 
   Future<ApiResponse<dynamic>> getShipmentOrders({
     required String shipmentId,
     int page = 1,
   }) async {
-   
+    try {
       var result = await BaseClient().getAll(
         endpoint: '/shipment/$shipmentId',
         page: page,
       );
       return result;
-   
+    } catch (e) {
+      rethrow;
+    }
   }
 }

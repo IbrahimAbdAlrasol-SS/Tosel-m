@@ -16,7 +16,7 @@ Future<void> main() async {
   var token = (await SharedPreferencesHelper.getUser())?.token;
   token == null
       ? initialLocation = AppRoutes.registerScreen
-      : initialLocation = AppRoutes.registerScreen;
+      : initialLocation = AppRoutes.home;
 
   runApp(
     ProviderScope(
