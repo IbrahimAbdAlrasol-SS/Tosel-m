@@ -31,27 +31,6 @@ class ShipmentsNotifier extends _$ShipmentsNotifier {
     }
   }
 
-  /// 🎯 إنشاء شحنة استحصال جديدة
-  Future<(Shipment?, String?)> createPickupShipment({
-    required Map<String, dynamic> shipmentData,
-  }) async {
-    try {
-      state = const AsyncValue.loading();
-      var result = await _service.createPickupShipment(shipmentData);
-
-      if (result.$1 != null) {
-        await refresh(); // Refresh the entire list
-        return (result.$1, null);
-      } else {
-        return (null, result.$2);
-      }
-    } catch (e) {
-      state = AsyncValue.error(e, StackTrace.current);
-      return (null, e.toString());
-    }
-  }
-
-  /// 🎯 إنشاء شحنة من نموذج Shipment
   Future<(Shipment?, String?)> createShipment({
     required Shipment shipment,
   }) async {
@@ -60,7 +39,7 @@ class ShipmentsNotifier extends _$ShipmentsNotifier {
       var result = await _service.createShipment(shipment);
 
       if (result.$1 != null) {
-        await refresh(); // Refresh the entire list
+        await refresh();
         return (result.$1, null);
       } else {
         return (null, result.$2);
@@ -92,7 +71,6 @@ class ShipmentsNotifier extends _$ShipmentsNotifier {
     }
   }
 
-  /// 🎯 إعادة تحديث البيانات
   Future<void> refresh({Map<String, dynamic>? queryParams}) async {
     try {
       // Don't show loading if we have data

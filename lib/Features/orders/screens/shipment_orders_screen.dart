@@ -17,7 +17,7 @@ import 'package:Tosell/paging/generic_paged_list_view.dart';
 class ShipmentOrdersScreen extends ConsumerStatefulWidget {
   final String shipmentId;
   final String? shipmentCode;
-  
+
   const ShipmentOrdersScreen({
     super.key,
     required this.shipmentId,
@@ -37,7 +37,7 @@ class _ShipmentOrdersScreenState extends ConsumerState<ShipmentOrdersScreen> {
     super.initState();
     // ✅ إنشاء فلتر للشحنة المحددة
     _currentFilter = OrderFilter(shipmentId: widget.shipmentId);
-    
+
     // ✅ استدعاء البيانات عبر Provider بدلاً من Service مباشرة
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(ordersNotifierProvider.notifier).getAll(
@@ -53,7 +53,7 @@ class _ShipmentOrdersScreenState extends ConsumerState<ShipmentOrdersScreen> {
       shipmentId: widget.shipmentId,
       code: searchTerm.isNotEmpty ? searchTerm : null,
     );
-    
+
     ref.read(ordersNotifierProvider.notifier).getAll(
       page: 1,
       queryParams: searchFilter.toJson(),
@@ -76,15 +76,15 @@ class _ShipmentOrdersScreenState extends ConsumerState<ShipmentOrdersScreen> {
               // ✅ Header - منطق UI فقط
               _buildHeader(context),
               const Gap(AppSpaces.medium),
-              
-              // ✅ Search bar - منطق UI فقط  
+
+              // ✅ Search bar - منطق UI فقط
               _buildSearchBar(context),
               const Gap(AppSpaces.medium),
-              
+
               // ✅ Title - منطق UI فقط
               _buildTitle(ordersState),
               const Gap(AppSpaces.small),
-              
+
               // ✅ Orders list - استهلاك البيانات من Provider
               Expanded(
                 child: ordersState.when(
@@ -157,7 +157,7 @@ class _ShipmentOrdersScreenState extends ConsumerState<ShipmentOrdersScreen> {
             height: 24,
           ),
         ),
-        onChanged: _performSearch, // ✅ استدعاء البحث عبر Provider
+        onChanged: _performSearch,
       ),
     );
   }
@@ -196,7 +196,6 @@ class _ShipmentOrdersScreenState extends ConsumerState<ShipmentOrdersScreen> {
       return _buildNoOrdersFound();
     }
 
-    // ✅ استخدام GenericPagedListView مع Provider
     return GenericPagedListView<Order>(
       key: ValueKey(_currentFilter.toJson()),
       fetchPage: (pageKey, _) async {

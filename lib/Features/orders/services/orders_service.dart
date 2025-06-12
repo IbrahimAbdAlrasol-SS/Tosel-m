@@ -2,34 +2,28 @@ import 'package:Tosell/core/Client/BaseClient.dart';
 import 'package:Tosell/core/Client/ApiResponse.dart';
 import 'package:Tosell/Features/orders/models/Order.dart';
 import 'package:Tosell/Features/order/models/add_order_form.dart';
+
 class OrdersService {
-  final BaseClient<Order> _baseClient;
+  final BaseClient<Order> baseClient;
 
   OrdersService()
-      : _baseClient = BaseClient<Order>(
-          fromJson: (json) => Order.fromJson(json),
-        );
+      : baseClient =
+            BaseClient<Order>(fromJson: (json) => Order.fromJson(json));
 
-  Future<ApiResponse<Order>> getOrders({
-    int page = 1, 
-    Map<String, dynamic>? queryParams,
-  }) async {
+  Future<ApiResponse<Order>> getOrders(
+      {int page = 1, Map<String, dynamic>? queryParams}) async {
     try {
-      final result = await _baseClient.getAll(
-        endpoint: '/order/merchant',
-        page: page,
-        queryParams: queryParams,
-      );
+      var result = await baseClient.getAll(
+          endpoint: '/order/merchant', page: page, queryParams: queryParams);
       return result;
     } catch (e) {
       rethrow;
     }
   }
 
-
   Future<(Order?, String?)> changeOrderState({required String code}) async {
     try {
-      final result = await _baseClient.update(
+      final result = await baseClient.update(
         endpoint: '/order/$code/advance-step',
       );
       return (result.singleData, result.message);
@@ -40,7 +34,7 @@ class OrdersService {
 
   Future<Order?>? getOrderByCode({required String code}) async {
     try {
-      var result = await _baseClient.getById(endpoint: '/order', id: code);
+      var result = await baseClient.getById(endpoint: '/order', id: code);
       return result.singleData;
     } catch (e) {
       rethrow;
@@ -63,7 +57,7 @@ class OrdersService {
       {required AddOrderForm orderForm}) async {
     try {
       var result =
-          await _baseClient.create(endpoint: '/order', data: orderForm.toJson());
+          await baseClient.create(endpoint: '/order', data: orderForm.toJson());
       if (result.singleData == null) return (null, result.message);
 
       return (result.singleData, null);

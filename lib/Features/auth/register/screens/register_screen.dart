@@ -104,11 +104,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
       this.longitude = longitude;
       this.nearestLandmark = nearestLandmark;
     });
-
-    print('🌍 تحديث المناطق والإحداثيات:');
-    print('   عدد المناطق: ${zones.length}');
-    print('   الإحداثيات: $latitude, $longitude');
-    print('   أقرب نقطة: $nearestLandmark');
   }
 
   bool _validateData() {
@@ -150,7 +145,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
 
     return true;
   }
-
   Future<void> _submitRegistration() async {
     if (!_validateData()) return;
 
@@ -159,18 +153,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     });
 
     try {
-      print('🚀 بدء عملية التسجيل...');
-      print('📋 البيانات النهائية:');
-      print('   الاسم الكامل: $fullName');
-      print('   اسم المتجر: $brandName');
-      print('   اسم المستخدم: $userName');
-      print('   رقم الهاتف: $phoneNumber');
-      print('   صورة الشعار: $brandImg');
-      print('   عدد المناطق: ${selectedZones.length}');
-      print('   الإحداثيات: $latitude, $longitude');
-      print('   أقرب نقطة: $nearestLandmark');
-
-      // ✅ استخدام auth_provider.register المحدث
       final result = await ref.read(authNotifierProvider.notifier).register(
         fullName: fullName!,
         brandName: brandName!,
@@ -185,9 +167,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
       );
 
       if (result.$2 == "REGISTRATION_SUCCESS_PENDING_APPROVAL") {
-        // ✅ تم التسجيل بنجاح - في انتظار الموافقة الإدارية
-        
-        
+                
         await Future.delayed(const Duration(seconds: 3));
         
         if (mounted) {
@@ -195,9 +175,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
         }
         
       } else if (result.$1 != null) {
-        // ✅ حالة مثالية: تم التسجيل والحصول على بيانات المستخدم مباشرة
-        print('✅ نجح التسجيل مع بيانات المستخدم: ${result.$1!.fullName}');
-        
+        // ✅ حالة مثالية: تم التسجيل والحصول على بيانات المستخدم مباشرة        
         await SharedPreferencesHelper.saveUser(result.$1!);
         
         GlobalToast.showSuccess(
@@ -213,7 +191,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
         
       } else {
         // ❌ خطأ حقيقي في التسجيل
-        print('❌ فشل التسجيل: ${result.$2}');
+        ('❌ فشل التسجيل: ${result.$2}');
         GlobalToast.show(
           message: result.$2 ?? 'فشل في التسجيل',
           backgroundColor: Colors.red,
@@ -222,7 +200,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
       }
       
     } catch (e) {
-      print('💥 خطأ في التسجيل: $e');
       GlobalToast.show(
         message: 'خطأ في التسجيل: ${e.toString()}',
         backgroundColor: Colors.red,
@@ -237,7 +214,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     }
   }
 
-  /// ✅ دالة التحقق من الخروج مع وجود بيانات
   Future<bool> _onWillPop() async {
     if (fullName?.isNotEmpty == true || 
         brandName?.isNotEmpty == true ||
@@ -245,7 +221,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
         phoneNumber?.isNotEmpty == true ||
         brandImg?.isNotEmpty == true ||
         selectedZones.isNotEmpty) {
-      
       return await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(

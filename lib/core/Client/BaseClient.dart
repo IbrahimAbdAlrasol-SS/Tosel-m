@@ -184,7 +184,8 @@ class BaseClient<T> {
         if (statusCode == 401) {
           errorType = ApiErrorType.unauthorized;
           message = 'Unauthorized';
-        } else {
+        }
+         else {
           errorType = ApiErrorType.serverError;
           message = e.response?.data['message'] ?? 'Server error';
         }

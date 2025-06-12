@@ -1,18 +1,20 @@
 import 'package:Tosell/Features/orders/models/Shipment.dart';
 import 'package:Tosell/core/Client/BaseClient.dart';
 import 'package:Tosell/core/Client/ApiResponse.dart';
+
 class ShipmentsService {
-  final BaseClient<Shipment> _baseClient;
+  final BaseClient<Shipment> baseClient;
+
   ShipmentsService()
-      : _baseClient = BaseClient<Shipment>(
-          fromJson: (json) => Shipment.fromJson(json),
-        );
+      : baseClient =
+            BaseClient<Shipment>(fromJson: (json) => Shipment.fromJson(json));
+
   Future<ApiResponse<Shipment>> getAll({
     int page = 1, 
     Map<String, dynamic>? queryParams,
   }) async {
     try {
-      final result = await _baseClient.getAll(
+      final result = await baseClient.getAll(
         endpoint: '/shipment/merchant/my-shipments',
         page: page,
         queryParams: queryParams,
@@ -25,7 +27,7 @@ class ShipmentsService {
   }
   Future<Shipment?> getShipmentById(String shipmentId) async {
     try {
-      final result = await _baseClient.getById(
+      final result = await baseClient.getById(
         endpoint: '/api/shipment',
         id: shipmentId,
       );
@@ -34,27 +36,9 @@ class ShipmentsService {
       return null;
     }
   }
-  Future<(Shipment?, String?)> createPickupShipment(
-    Map<String, dynamic> shipmentData,
-  ) async {
-    try {
-      final result = await _baseClient.create(
-        endpoint: '/shipment/pick-up',
-        data: shipmentData,
-      );
-
-      if (_isSuccessResponse(result.code)) {
-        return (result.singleData, null);
-      } else {
-        return (null, result.message ?? 'فشل في إنشاء الشحنة');
-      }
-    } catch (e) {
-      return (null, e.toString());
-    }
-  }
   Future<(Shipment?, String?)> createShipment(Shipment shipment) async {
     try {
-      final result = await _baseClient.create(
+      final result = await baseClient.create(
         endpoint: '/shipment/pick-up',
         data: shipment.toJson(),
       );
@@ -74,7 +58,7 @@ class ShipmentsService {
   }) async {
     try {
       final result = await BaseClient().getAll(
-        endpoint: '/shipment/$shipmentId/orders', // ✅ تحسين endpoint
+        endpoint: '/shipment/$shipmentId/orders',
         page: page,
       );
       return result;
@@ -87,7 +71,7 @@ class ShipmentsService {
     required int newStatus,
   }) async {
     try {
-      final result = await _baseClient.update(
+      final result = await baseClient.update(
         endpoint: '/shipment/$shipmentId/status',
         data: {'status': newStatus},
       );
