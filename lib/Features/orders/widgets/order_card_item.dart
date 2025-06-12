@@ -41,7 +41,7 @@ class OrderCardItem extends ConsumerWidget {
       onLongPress: canSelect ? onSelectionToggle : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2), // تقليل المسافة
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2), // Reduce spacing
         padding: const EdgeInsets.only(right: 2, left: 2, bottom: 2),
         decoration: BoxDecoration(
           border: Border.all(
@@ -94,7 +94,7 @@ class OrderCardItem extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  order.code ?? "لايوجد",
+                                  order.code ?? "N/A",
                                   textAlign: TextAlign.right,
                                   style: TextStyle(
                                     fontSize: 16,
@@ -135,7 +135,7 @@ class OrderCardItem extends ConsumerWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             buildSection(
-                              order.customerName ?? "لايوجد",
+                              order.customerName ?? "N/A",
                               "assets/svg/User.svg",
                               theme,
                             ),
@@ -145,7 +145,7 @@ class OrderCardItem extends ConsumerWidget {
                               color: theme.colorScheme.outline,
                             ),
                             const Gap(AppSpaces.small),
-                            buildSection(order.content ?? "لايوجد",
+                            buildSection(order.content ?? "N/A",
                                 "assets/svg/box.svg", theme),
                           ],
                         ),
@@ -160,7 +160,7 @@ class OrderCardItem extends ConsumerWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             buildSection(
-                                order.deliveryZone?.governorate?.name ?? "لايوجد",
+                                order.deliveryZone?.governorate?.name ?? "N/A",
                                 "assets/svg/MapPinLine.svg",
                                 theme),
                             VerticalDivider(
@@ -169,7 +169,7 @@ class OrderCardItem extends ConsumerWidget {
                               color: theme.colorScheme.outline,
                             ),
                             const Gap(AppSpaces.small),
-                            buildSection(order.deliveryZone?.name ?? "لايوجد",
+                            buildSection(order.deliveryZone?.name ?? "N/A",
                                 "assets/svg/MapPinArea.svg", theme),
                           ],
                         ),
@@ -239,16 +239,30 @@ class OrderCardItem extends ConsumerWidget {
   }
 
   Widget _buildOrderStatus(int index) {
+    // Ensure index is within bounds
+    int statusIndex = index;
+    if (statusIndex < 0 || statusIndex >= orderStatus.length) {
+      statusIndex = 0; // Use default status
+    }
+    
+    // Debug print for status
+    print('Order status index: $index, using statusIndex: $statusIndex, status name: ${orderStatus[statusIndex].name}');
+    
     return Container(
       width: 100,
       height: 26,
       decoration: BoxDecoration(
-        color: orderStatus[index].color,
+        color: orderStatus[statusIndex].color,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Center(
         child: Text(
-          orderStatus[index].name!,
+          orderStatus[statusIndex].name!,
+          style: TextStyle(
+            color: orderStatus[statusIndex].textColor ?? Colors.black,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
     );

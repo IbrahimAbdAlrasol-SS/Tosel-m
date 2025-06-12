@@ -30,8 +30,8 @@ class TransactionEnum {
 var transactionStates = [
   //? index = 0
   TransactionEnum(
-    title: 'المعاملة مكتملة',
-    subTitle: 'تم تسليم المنتج واستلام المبلغ من الزبون و تم ايصال المبلغ اليك',
+    title: 'تمت المعاملة',
+    subTitle: 'تم تسليم المنتج واستلام المبلغ من العميل وتحويله إليك',
     titleColor: const Color(0xFF005200),
     screenTitle: 'مستلم',
     color: const Color(0xFFE8FCF5),
@@ -45,9 +45,9 @@ var transactionStates = [
 
   //? index = 1
   TransactionEnum(
-    title: 'المعاملة مرتجعة',
+    title: 'تم إرجاع المعاملة',
     subTitle:
-        'تم ايصال المنتج الى الزبون لكن لم يستلمه الزبون و منتجك قيد الرجوع اليك.',
+        'تم تسليم المنتج للعميل ولكن العميل لم يستلمه ويتم إرجاع منتجك إليك',
     titleColor: const Color(0xFF520000),
     screenTitle: 'مرتجع',
     color: const Color(0xFFFFF5F5),
@@ -61,10 +61,10 @@ var transactionStates = [
 
   //? index = 2
   TransactionEnum(
-    title: 'المعاملة مستحقة',
+    title: 'معاملة مستحقة',
     titleColor: const Color(0xFF524100),
     subTitle:
-        'لقد استلم الزبون منتجك و تم إستلام المبلغ في الشركة بإنتظار ايصال المبلغ اليك',
+        'استلم العميل منتجك وتم استلام المبلغ من قبل الشركة في انتظار تحويل المبلغ إليك',
     icon: SvgPicture.asset(
       'assets/svg/coines.svg',
       color: const Color(0xFFFFE500),

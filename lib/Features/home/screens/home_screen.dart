@@ -48,9 +48,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CustomAppBar(
-          title: "مرحبًا، ${user.userName}",
+          title: "أهلاً وسهلاً، ${user.userName}",
           showBackButton: false,
-          subtitle: "إليك لمحة عن نشاطك اليوم.",
+          subtitle: "إليك نظرة عامة على نشاطك اليوم.",
           buttonWidget: CircleAvatar(
             backgroundImage: NetworkImage(imageUrl+(user.img?? "")),
             radius: 20,
@@ -93,7 +93,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Gap(AppSpaces.small),
-                buildTitle(title: "إحصائيات عامة"),
+                buildTitle(title: "الإحصائيات العامة"),
                 const Gap(AppSpaces.small),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -102,16 +102,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     children: [
                       buildCart(
                         context,
-                        title: "قيد الإستلام",
-                        subtitle: home.inPickUpProgress?.toString() ?? 'لايوجد',
+                        title: "قيد الاستلام",
+              subtitle: home.inPickUpProgress?.toString() ?? 'غير متوفر',
                         iconPath: "assets/svg/SpinnerGap.svg",
                         iconColor: const Color(0xFFFFE500),
                       ),
                       const Gap(AppSpaces.small),
                       buildCart(
                         context,
-                        title: "في المخزن ",
-                        subtitle: home.inWarehouse?.toString() ?? 'لايوجد',
+                        title: "في المستودع",
+              subtitle: home.inWarehouse?.toString() ?? 'غير متوفر',
                         iconPath: "assets/svg/Warehouse.svg",
                         iconColor: const Color(0xFF80D4FF),
                       ),
@@ -125,15 +125,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     buildCart(
                       context,
                       title: "قيد التوصيل",
-                      subtitle: home.inDeliveryProgress?.toString() ?? 'لايوجد',
+              subtitle: home.inDeliveryProgress?.toString() ?? 'غير متوفر',
                       iconPath: "assets/svg/Truck.svg",
                       iconColor: const Color(0xFFE96363),
                     ),
                     const Gap(AppSpaces.small),
                     buildCart(
                       context,
-                      title: "تم الإستلام",
-                      subtitle: home.delivered?.toString() ?? 'لايوجد',
+                      title: "تم التوصيل",
+              subtitle: home.delivered?.toString() ?? 'غير متوفر',
                       iconPath: "assets/svg/Checks.svg",
                       iconColor: const Color(0xFF8CD98C),
                     ),
@@ -141,7 +141,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 const Gap(AppSpaces.large),
                 buildTitle(
-                  title: "إحصائيات هذا اليوم",
+                  title: "إحصائيات اليوم",
                   more: true,
                   onTap: () =>
                       GoRouter.of(context).push(AppRoutes.transactions),
@@ -150,7 +150,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 buildCart(
                   context,
                   title: "إجمالي الأرباح",
-                  subtitle: home.dailyProfits?.toInt().toString() ?? 'لايوجد',
+              subtitle: home.dailyProfits?.toInt().toString() ?? 'غير متوفر',
                   iconPath: "assets/svg/coines.svg",
                   iconColor: const Color(0xFF16CA8B),
                   expanded: false,
@@ -159,7 +159,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 buildCart(
                   context,
                   title: "الطلبات المكتملة",
-                  subtitle: home.dailyDoneOrders?.toString() ?? 'لايوجد',
+              subtitle: home.dailyDoneOrders?.toString() ?? 'غير متوفر',
                   iconPath: "assets/svg/CheckSquare.svg",
                   iconColor: const Color(0xFF8CD98C),
                   expanded: false,
@@ -168,14 +168,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 buildCart(
                   context,
                   title: "الطلبات المرتجعة",
-                  subtitle: home.dailyReturnedOrders?.toString() ?? 'لايوجد',
+              subtitle: home.dailyReturnedOrders?.toString() ?? 'غير متوفر',
                   iconPath: "assets/svg/BoxArrowDown.svg",
                   iconColor: const Color(0xFFE96363),
                   expanded: false,
                 ),
                 const Gap(AppSpaces.large),
                 buildTitle(
-                  title: "أبرز الطلبات",
+                  title: "الطلبات المميزة",
                   more: true,
                   onTap: () => GoRouter.of(context).push(AppRoutes.orders),
                 ),
@@ -191,11 +191,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       child: buildCart(
                         context,
                         title: home.orders?[index].customerName,
-                        subtitle: "error in model",
+                        subtitle: "خطأ في النموذج",
                         iconPath: "assets/svg/box.svg",
                         iconColor: const Color(0xFF16CA8B),
                         expanded: false,
-                        state: "تم الاستلام",
+                        state: "تم التوصيل",
                         isOrder: true,
                       ),
                     ),

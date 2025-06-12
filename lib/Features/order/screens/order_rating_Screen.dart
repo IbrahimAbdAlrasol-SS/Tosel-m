@@ -73,8 +73,8 @@ class _OrderRatingScreenState extends State<OrderRatingScreen> {
                       ),
                       Text(
                         isRated == false
-                            ? "كيف كانت تجربتك معنا؟  "
-                            : "شكرًا لك!",
+                            ? "كيف كانت تجربتك معنا؟"
+                : "شكراً لك!",
                         textAlign: TextAlign.center,
                         style: Theme.of(context)
                             .textTheme
@@ -86,8 +86,8 @@ class _OrderRatingScreenState extends State<OrderRatingScreen> {
                       ),
                       Text(
                         isRated == false
-                            ? "تقييمك سيساهم في تحسين خدماتنا و تجربتك في استخدام أكسير"
-                            : "تم إرسال تقييمك بنجاح. نقدر مساهمتك في تحسين خدماتنا.",
+                            ? "تقييمك سيساعد في تحسين خدماتنا وتجربتك في استخدام أكسير"
+                : "تم إرسال تقييمك بنجاح. نقدر مساهمتك في تحسين خدماتنا.",
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.titleSmall!.copyWith(
                             color: Theme.of(context).colorScheme.secondary),
@@ -161,7 +161,7 @@ class _OrderRatingScreenState extends State<OrderRatingScreen> {
                     Expanded(
                       child: OutlinedCustomButton(
                         borderColor: theme.outline,
-                        label: "غلق",
+                        label: "إغلاق",
                         textColor: theme.secondary,
                         onPressed: () {
                           Navigator.pop(context);
@@ -172,7 +172,7 @@ class _OrderRatingScreenState extends State<OrderRatingScreen> {
                     Expanded(
                       child: FillButton(
                         color: theme.primary,
-                        label: "ارسال التقييم",
+                        label: "إرسال التقييم",
                         onPressed: () {
                   
                         },
@@ -194,7 +194,7 @@ class _OrderRatingScreenState extends State<OrderRatingScreen> {
       children: [
         const Gap(AppSpaces.small),
         Text(
-          "هل لديك أي شكوى او اقتراحات لتحسين خدماتنا؟ ",
+          "هل لديك أي شكاوى أو اقتراحات لتحسين خدماتنا؟",
           style: TextStyle(
             fontSize: 16,
             color: theme.onSurface,

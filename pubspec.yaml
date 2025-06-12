@@ -98,7 +98,6 @@ flutter:
     - assets/fonts/
     - assets/lang/
     - assets/svg/
-    - assets/audios/
     - assets/fonts/Tajawal-Regular.ttf
     - assets/fonts/Tajawal-Bold.ttf
     - assets/fonts/Tajawal-Light.ttf

@@ -36,7 +36,7 @@ class TransactionsScreen extends ConsumerWidget {
         child: Column(
           children: [
             const CustomAppBar(
-              title: 'سجل المعاملات المالية',
+              title: 'Financial Transactions Log',
               showBackButton: true,
             ),
             const Gap(AppSpaces.medium),
@@ -193,7 +193,7 @@ class TransactionsScreen extends ConsumerWidget {
                   ),
                   child: Center(
                     child: Text(
-                      state.screenTitle ?? "لايوجد",
+                      state.screenTitle ?? "Not Available",
                     ),
                   ),
                 ),

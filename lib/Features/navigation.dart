@@ -133,7 +133,7 @@ class _NavigationPageState extends ConsumerState<NavigationPage> {
     String? res = await SimpleBarcodeScanner.scanBarcode(
       context,
       barcodeAppBar: const BarcodeAppBar(
-        appBarTitle: 'Scan',
+        appBarTitle: 'مسح',
         centerTitle: false,
         enableBackButton: true,
         backButtonIcon: Icon(Icons.arrow_back_ios),

@@ -12,8 +12,8 @@ class _LanguageScreenState extends State<LanguageScreen> {
   String? _selectedLanguage;
   final List<String> _languages = [
     'العربية',
-    'الكوردي',
-    'English',
+    'کوردی',
+    'الإنجليزية',
   ];
 
   @override

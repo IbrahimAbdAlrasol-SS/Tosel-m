@@ -18,6 +18,18 @@ class OrdersNotifier extends _$OrdersNotifier {
       rethrow;
     }
   }
+
+  Future<ApiResponse<Order>> getOrdersByShipment(
+    String shipmentCode,
+    int page,
+  ) async {
+    try {
+      final queryParams = {'shipmentCode': shipmentCode};
+      return await _service.getOrders(queryParams: queryParams, page: page);
+    } catch (e) {
+      rethrow;
+    }
+  }
   Future<Order?> getOrderByCode({required String code}) async {
     try {
       return await _service.getOrderByCode(code: code);
@@ -39,19 +51,6 @@ class OrdersNotifier extends _$OrdersNotifier {
     } catch (e) {
       state = AsyncValue.error(e, StackTrace.current);
       return (null, e.toString());
-    }
-  }
-  Future<(Order?, String?)> changeOrderState({required String code}) async {
-    try {
-      var result = await _service.changeOrderState(code: code);
-      
-      if (result.$1 != null) {
-        await refresh(); 
-      }
-      
-      return result;
-    } catch (e) {
-      rethrow;
     }
   }
   Future<bool> validateCode({required String code}) async {

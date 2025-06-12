@@ -23,7 +23,7 @@ class StatisticsScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "إحصائيات شاملة",
+                      "الإحصائيات الشاملة",
                       style: context.textTheme.titleMedium!.copyWith(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -49,7 +49,7 @@ class StatisticsScreen extends StatelessWidget {
                             Padding(
                               padding: const EdgeInsets.only(top: 3),
                               child: Text(
-                                'تحميل تقرير',
+                                'تحميل التقرير',
                                 style: context.textTheme.titleSmall!.copyWith(
                                   color: const Color(0xFF0C6E4C),
                                   fontSize: 15,
@@ -114,7 +114,7 @@ class StatisticsScreen extends StatelessWidget {
   }
 
   Widget _buildProvinceOrdersChart() {
-  final List<String> provinces = ['ذي قار', 'واسط', 'بابل', 'موصل', 'بصرة', 'اربيل', 'بغداد'];
+  final List<String> provinces = ['Dhi Qar', 'Wasit', 'Babylon', 'Mosul', 'Basra', 'Erbil', 'Baghdad'];
   final List<int> values = [182, 90, 1203, 390, 194, 267, 200];
   final double maxY = values.reduce((a, b) => a > b ? a : b).toDouble() * 1.2;
 
@@ -255,10 +255,10 @@ class StatisticsScreen extends StatelessWidget {
   Widget _buildPieChart(BuildContext context) {
     final chartData = [
       {"label": "مكتمل", "value": 3500, "color": const Color(0xFF8CD98C)},
-      {"label": "قيد التوصيل", "value": 1500, "color": const Color(0xFF80D4FF)},
-      {"label": "قيد التحضير", "value": 2500, "color": const Color(0xFFFFE500)},
-      {"label": "ملغي", "value": 500, "color": const Color(0xFFE96363)},
-      {"label": "مرتجع", "value": 2000, "color": const Color(0xFFAA80FF)},
+    {"label": "قيد التوصيل", "value": 1500, "color": const Color(0xFF80D4FF)},
+    {"label": "قيد التحضير", "value": 2500, "color": const Color(0xFFFFE500)},
+    {"label": "ملغي", "value": 500, "color": const Color(0xFFE96363)},
+    {"label": "مرتجع", "value": 2000, "color": const Color(0xFFAA80FF)},
     ];
 
     return Container(

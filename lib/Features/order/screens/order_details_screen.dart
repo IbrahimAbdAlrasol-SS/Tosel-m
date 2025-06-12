@@ -13,6 +13,7 @@ import 'package:Tosell/core/widgets/custom_phoneNumbrt.dart';
 import 'package:Tosell/Features/orders/models/order_enum.dart';
 import 'package:Tosell/Features/order/screens/order_state_bottom_sheet.dart';
 import 'package:Tosell/Features/order/providers/order_commands_provider.dart';
+import 'package:easy_localization/easy_localization.dart';
 
 class OrderDetailsScreen extends ConsumerStatefulWidget {
   final String code;
@@ -44,7 +45,7 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
 
   Widget buildUi(BuildContext context, Order? order) {
     if (order == null) {
-      return const Center(child: Text('لايوجد طلب بهذا الكود '));
+      return Center(child: Text('no_order_found'.tr()));
     }
     var date = DateTime.parse(order.creationDate!);
 
@@ -76,7 +77,7 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
                           buildOrderSection("رقم الطلب", "assets/svg/User.svg",
                               Theme.of(context),
                               padding: const EdgeInsets.only(bottom: 3, top: 3),
-                              subWidget: Text(order.code ?? 'لايوجد')),
+                              subWidget: Text(order.code ?? 'N/A')),
                           VerticalDivider(
                             width: 1,
                             thickness: 1,
@@ -101,7 +102,7 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
                                 child: Text(
                                   orderStatus[handelProductState(order.status!)]
                                           .name ??
-                                      'لايوجد',
+                                      'N/A',
                                 ),
                               ),
                             ),
@@ -132,7 +133,7 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
                             Theme.of(context),
                             padding: const EdgeInsets.only(bottom: 5, top: 5),
                             subWidget:
-                                Text(order.amount?.toString() ?? "لايوجد"),
+                                Text(order.amount?.toString() ?? "N/A"),
                           ),
                         ],
                       ),
@@ -145,7 +146,7 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
                               "assets/svg/CalendarBlank.svg", Theme.of(context),
                               padding: const EdgeInsets.only(bottom: 3, top: 3),
                               subWidget: Text(order.size == null
-                                  ? "لايوجد"
+                                  ? "N/A"
                                   : orderSizes[order.size!].name!)),
                           VerticalDivider(
                             width: 1,
@@ -169,7 +170,7 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
                   ],
                 ),
                 CustomSection(
-                  title: "معلومات الزبون",
+                  title: "معلومات العميل",
                   icon: SvgPicture.asset(
                     "assets/svg/User.svg",
                     color: Theme.of(context).colorScheme.primary,
@@ -181,10 +182,10 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          buildOrderSection("أسم الزبون",
+                          buildOrderSection("اسم العميل",
                               "assets/svg/UserCircle.svg", Theme.of(context),
                               padding: const EdgeInsets.only(bottom: 3, top: 3),
-                              subWidget: Text(order.customerName ?? "لايوجد")),
+                              subWidget: Text(order.customerName ?? "N/A")),
                           VerticalDivider(
                             width: 1,
                             thickness: 1,
@@ -198,7 +199,7 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
                             padding: const EdgeInsets.only(bottom: 3, top: 3),
                             subWidget: Text(
                               customPhoneNumber(
-                                  order.customerPhoneNumber ?? "لايوجد"),
+                                  order.customerPhoneNumber ?? "N/A"),
                             ),
                           ),
                         ],
@@ -213,7 +214,7 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
                               padding: const EdgeInsets.only(bottom: 3, top: 3),
                               subWidget: Text(
                                   order.deliveryZone?.governorate?.name ??
-                                      "لايوجد")),
+                                      "N/A")),
                           VerticalDivider(
                             width: 1,
                             thickness: 1,
@@ -226,7 +227,7 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
                             Theme.of(context),
                             padding: const EdgeInsets.only(bottom: 3, top: 3),
                             subWidget:
-                                Text(order.deliveryZone?.name ?? "لايوجد"),
+                                Text(order.deliveryZone?.name ?? "N/A"),
                           ),
                         ],
                       ),
@@ -234,7 +235,7 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
                   ],
                 ),
                 buildProductInfo(
-                  content: order.content ?? 'لايوجد',
+                  content: order.content ?? 'N/A',
                   context,
                 ), // You might want to pass the index or product
 
@@ -256,7 +257,7 @@ class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
                     ),
                   ),
                   child: FillButton(
-                    label: "تواصل مع الدعم الفني",
+                    label: "اتصل بالدعم الفني",
                     onPressed: () {},
                     reverse: true,
                     icon: SvgPicture.asset(

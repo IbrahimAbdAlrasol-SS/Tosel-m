@@ -30,13 +30,13 @@ class DeliveryOption extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.only(top: 5),
                   child: Text(
-                    "اعتيادي (5,000 د.ع)",
+                    "عادي (5,000 د.ع)",
                     style: Theme.of(context).textTheme.titleMedium!.copyWith(),
                   ),
                 ),
               ),
               Text(
-                "خلال 1-2 يوم",
+                "خلال 1-2 أيام",
                 style:
                     TextStyle(color: Theme.of(context).colorScheme.secondary),
               ),
