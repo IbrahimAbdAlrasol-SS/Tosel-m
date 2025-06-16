@@ -1,16 +1,19 @@
+import 'package:Tosell/Features/auth/models/User.dart';
 import 'package:Tosell/core/utils/extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gap/gap.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'dart:async';
 import '../providers/account_lock_provider.dart';
 import '../widgets/countdown_timer_widget.dart';
 import '../register/widgets/build_background.dart';
 import '../../../core/widgets/FillButton.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/helpers/SharedPreferencesHelper.dart';
-// Remove unused import since app_spaces.dart doesn't exist
+import '../login/providers/auth_provider.dart';
+import '../../../core/utils/GlobalToast.dart';
 
 class AccountLockScreen extends ConsumerStatefulWidget {
   const AccountLockScreen({super.key});
@@ -20,12 +23,53 @@ class AccountLockScreen extends ConsumerStatefulWidget {
 }
 
 class _AccountLockScreenState extends ConsumerState<AccountLockScreen> {
+  Timer? _pollingTimer;
+
   @override
   void initState() {
     super.initState();
     // تحديث حالة انتهاء المهلة عند فتح الشاشة
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(accountLockNotifierProvider.notifier).build();
+    });
+    
+    // بدء التحقق الدوري
+    _startPolling();
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startPolling() {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
+      try {
+        final (isActive, error) = await ref
+            .read(authNotifierProvider.notifier)
+            .checkAccountStatus();
+            
+        if (isActive) {
+          // تم تفعيل الحساب!
+          timer.cancel();
+          
+          GlobalToast.showSuccess(
+            message: 'تم تفعيل حسابك بنجاح! يرجى تسجيل الدخول',
+            durationInSeconds: 3,
+          );
+          
+          // مسح حالة القفل
+          await ref.read(accountLockNotifierProvider.notifier).clearLockStatus();
+          
+          // الانتقال لتسجيل الدخول
+          if (mounted) {
+            context.go(AppRoutes.login);
+          }
+        }
+      } catch (e) {
+        print('خطأ في التحقق من التفعيل: $e');
+      }
     });
   }
 
@@ -131,70 +175,75 @@ class _AccountLockScreenState extends ConsumerState<AccountLockScreen> {
   }
 
   Widget _buildTopBar(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // معلومات المتجر على اليمين (start)
-          Row(
+    return FutureBuilder(
+      future: SharedPreferencesHelper.getUser(),
+      builder: (context, snapshot) {
+        final user = User();
+        
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: SvgPicture.asset(
-                  "assets/svg/store.svg",
-                  height: 24,
-                  width: 24,
-                  color: Colors.white,
-                ),
-              ),
-              const Gap(8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              // معلومات المتجر على اليمين (start)
+              Row(
                 children: [
-                  const Text(
-                    'متجر ليف',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: SvgPicture.asset(
+                      "assets/svg/store.svg",
+                      height: 24,
+                      width: 24,
                       color: Colors.white,
                     ),
                   ),
-                  const Text(
-                    '0771 333 4545',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white70,
-                    ),
+                  const Gap(8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'متجر جديد',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        user?.phoneNumber ?? '',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
+
+              GestureDetector(
+                onTap: () => null,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Icon(
+                    Icons.logout,
+                    size: 18,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
             ],
           ),
-
-          GestureDetector(
-            onTap: () {
-              //Navigator.of(context).pop();
-            },
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Icon(
-                Icons.arrow_back,
-                size: 18,
-                color: Colors.red,
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -296,7 +345,6 @@ class _AccountLockScreenState extends ConsumerState<AccountLockScreen> {
     );
   }
 
-  // بناء زر الدعم
   Widget _buildSupportButton(BuildContext context) {
     return Stack(
       children: [
@@ -318,7 +366,7 @@ class _AccountLockScreenState extends ConsumerState<AccountLockScreen> {
               ),
               const Gap(8),
               GestureDetector(
-                onTap: () => _showSupportDialog(context),
+                onTap: () => null,
                 child: const Text(
                   'تواصل مع الدعم الفني',
                   style: TextStyle(
@@ -347,44 +395,6 @@ class _AccountLockScreenState extends ConsumerState<AccountLockScreen> {
     );
   }
 
-  void _showSupportDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('تواصل مع الدعم الفني'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('يمكنك التواصل معنا عبر:'),
-            Gap(8),
-            Text('📞 الهاتف: 077 123 4567'),
-            Text('📧 البريد: support@tosell.com'),
-            Text('💬 واتساب: 077 123 4567'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('إغلاق'),
-          ),
-        ],
-      ),
-    );
-  }
+  
 
-  Future<void> _logout(BuildContext context) async {
-    try {
-      // مسح بيانات المستخدم وحالة القفل
-      await SharedPreferencesHelper.removeUser();
-      await ref.read(accountLockNotifierProvider.notifier).clearLockStatus();
-
-      // الانتقال إلى شاشة تسجيل الدخول
-      if (context.mounted) {
-        context.go(AppRoutes.login);
-      }
-    } catch (e) {
-      print('خطأ في تسجيل الخروج: $e');
-    }
-  }
 }

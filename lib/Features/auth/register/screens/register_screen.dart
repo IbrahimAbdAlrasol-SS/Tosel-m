@@ -179,28 +179,38 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
           );
 
       if (result.$2 == "REGISTRATION_SUCCESS_PENDING_APPROVAL") {
-        await Future.delayed(const Duration(seconds: 3));
-
+        // ✅ حالة خاصة - بدون توكن
+        GlobalToast.show(
+          message: 'تم إنشاء حسابك بنجاح! في انتظار التفعيل من الإدارة',
+          backgroundColor: Colors.orange,
+          durationInSeconds: 3,
+        );
+        
+        // الانتقال لشاشة تسجيل الدخول
         if (mounted) {
           context.go(AppRoutes.login);
         }
       } else if (result.$1 != null) {
-        // ✅ حالة مثالية: تم التسجيل والحصول على بيانات المستخدم مباشرة
-        await SharedPreferencesHelper.saveUser(result.$1!);
-
+        // ✅ حصلنا على بيانات المستخدم
         GlobalToast.showSuccess(
-          message: 'مرحباً بك في توصيل! تم تفعيل حسابك بنجاح',
-          durationInSeconds: 3,
+          message: 'تم إنشاء حسابك بنجاح!',
+          durationInSeconds: 2,
         );
 
-        await Future.delayed(const Duration(seconds: 1));
-
-        if (mounted) {
-          context.go(AppRoutes.login);
+        // التحقق من حالة التفعيل
+        if (result.$1!.isActive == false) {
+          // الانتقال لشاشة القفل
+          if (mounted) {
+            context.go(AppRoutes.accountLock);
+          }
+        } else {
+          // حساب مفعل مباشرة (نادر)
+          if (mounted) {
+            context.go(AppRoutes.home);
+          }
         }
       } else {
         // ❌ خطأ حقيقي في التسجيل
-        ('❌ فشل التسجيل: ${result.$2}');
         GlobalToast.show(
           message: result.$2 ?? 'فشل في التسجيل',
           backgroundColor: Colors.red,

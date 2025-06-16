@@ -143,12 +143,31 @@ class authNotifier extends _$authNotifier {
 
       // ✅ التعامل مع الحالات المختلفة
       if (error == "REGISTRATION_SUCCESS_PENDING_APPROVAL") {
-        // ✅ تسجيل ناجح لكن يحتاج موافقة إدارية - إنشاء حالة قفل
+        // ✅ حالة خاصة - في انتظار التفعيل مع عدم وجود بيانات مستخدم
         print('✅ AuthProvider: تم التسجيل بنجاح - في انتظار الموافقة الإدارية');
         // إنشاء حالة قفل للحساب الجديد
         await _createAccountLockStatus();
         state = const AsyncValue.data(null);
         return (null, "REGISTRATION_SUCCESS_PENDING_APPROVAL");
+      }
+
+      if (user != null) {
+        // ✅ حفظ بيانات المستخدم والتوكن
+        print('✅ AuthProvider: تم التسجيل بنجاح - حفظ البيانات');
+        print('   - الاسم: ${user.fullName}');
+        print('   - التوكن: ${user.token != null ? 'موجود' : 'غير موجود'}');
+        print('   - حالة التفعيل: ${user.isActive}');
+        
+        await SharedPreferencesHelper.saveUser(user);
+        
+        // إنشاء حالة قفل إذا كان الحساب غير مفعل
+        if (user.isActive == false) {
+          print('⏰ الحساب غير مفعل - إنشاء حالة قفل');
+          await _createAccountLockStatus();
+        }
+        
+        state = AsyncValue.data(user);
+        return (user, null);
       }
 
       if (user == null) {

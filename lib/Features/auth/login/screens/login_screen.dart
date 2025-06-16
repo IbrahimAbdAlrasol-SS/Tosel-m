@@ -251,40 +251,34 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                       textColor: Colors.white,
                                     );
                                   } else {
+                                    // حفظ بيانات المستخدم
+                                    await SharedPreferencesHelper.saveUser(
+                                        result.$1!);
+                                    
                                     GlobalToast.show(
                                       message: "تم تسجيل الدخول بنجاح",
                                       backgroundColor:
                                           context.colorScheme.primary,
                                       textColor: Colors.white,
                                     );
-                                    if (loginState is AsyncData) {
-                                      SharedPreferencesHelper.saveUser(
-                                          result.$1!);
-
-                                      // التحقق من حالة نشاط الحساب أولاً
-                                      final (isActive, error) = await ref
-                                          .read(authNotifierProvider.notifier)
-                                          .checkAccountStatus();
-                                      
-                                      if (isActive) {
-                                        // الحساب نشط، اذهب إلى الصفحة الرئيسية
-                                        context.go(AppRoutes.home);
-                                      } else {
-                                        // الحساب غير نشط، فحص حالة القفل
-                                        final shouldShowLock =
-                                            await AccountLockService
-                                                .shouldShowLockScreen();
-                                        if (shouldShowLock) {
-                                          context.go(AppRoutes.accountLock);
-                                        } else {
-                                          // لا توجد حالة قفل، ابق في شاشة تسجيل الدخول
-                                          GlobalToast.show(
-                                            message: "الحساب غير نشط حالياً",
-                                            backgroundColor: Colors.orange,
-                                            textColor: Colors.white,
-                                          );
-                                        }
+                                    
+                                    // التحقق من حالة التفعيل
+                                    final (isActive, error) = await ref
+                                        .read(authNotifierProvider.notifier)
+                                        .checkAccountStatus();
+                                    
+                                    if (isActive) {
+                                      // مسح أي حالة قفل قديمة
+                                      await AccountLockService.clearLockStatus();
+                                      context.go(AppRoutes.home);
+                                    } else {
+                                      // إنشاء حالة قفل إذا لم تكن موجودة
+                                      final shouldShowLock = await AccountLockService
+                                          .shouldShowLockScreen();
+                                      if (!shouldShowLock) {
+                                        await AccountLockService.createLockStatus();
                                       }
+                                      context.go(AppRoutes.accountLock);
                                     }
                                   }
                                 }

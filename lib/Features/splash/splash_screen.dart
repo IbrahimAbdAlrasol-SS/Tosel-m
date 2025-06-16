@@ -1,148 +1,92 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:Tosell/core/router/app_router.dart';
+import 'package:Tosell/core/helpers/SharedPreferencesHelper.dart';
+import 'package:Tosell/Features/auth/Services/account_lock_service.dart';
+import 'package:Tosell/Features/auth/login/providers/auth_provider.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<Offset> _topCircleOffset;
-  late Animation<Offset> _bottomCircleOffset;
-  late Animation<double> _logoOpacity;
-
+class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
-
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    );
-
-    _topCircleOffset = Tween<Offset>(
-      begin: const Offset(-1.5, -1.5),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-
-    _bottomCircleOffset = Tween<Offset>(
-      begin: const Offset(1.5, 1.5),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-
-    _logoOpacity = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
-
-    _controller.forward();
-
-    Timer(const Duration(seconds: 3), () {
-      GoRouter.of(context)
-          .go(initialLocation); // replace with your initial route
-    });
+    _checkUserStatus();
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  Future<void> _checkUserStatus() async {
+    await Future.delayed(const Duration(seconds: 2)); // تأخير للشعار
 
-  Widget buildCircle({
-    required double height,
-    required double width,
-  }) {
-    return Container(
-      height: height,
-      width: width,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        color: Color.fromARGB(24, 55, 38, 82),
-      ),
-    );
+    try {
+      // التحقق من وجود مستخدم محفوظ
+      final user = await SharedPreferencesHelper.getUser();
+      
+      if (user == null) {
+        // لا يوجد مستخدم - اذهب لتسجيل الدخول
+        if (mounted) context.go(AppRoutes.login);
+        return;
+      }
+
+      // يوجد مستخدم - تحقق من حالة التفعيل
+      final (isActive, error) = await ref
+          .read(authNotifierProvider.notifier)
+          .checkAccountStatus();
+
+      if (error == 'غير مصرح') {
+        // التوكن منتهي أو غير صالح
+        await SharedPreferencesHelper.removeUser();
+        if (mounted) context.go(AppRoutes.login);
+        return;
+      }
+
+      if (isActive) {
+        // الحساب مفعل - اذهب للرئيسية
+        await AccountLockService.clearLockStatus();
+        if (mounted) context.go(AppRoutes.home);
+      } else {
+        // الحساب غير مفعل - تحقق من حالة القفل
+        final shouldShowLock = await AccountLockService.shouldShowLockScreen();
+        
+        if (shouldShowLock) {
+          if (mounted) context.go(AppRoutes.accountLock);
+        } else {
+          // لا توجد حالة قفل - أنشئ واحدة
+          await AccountLockService.createLockStatus();
+          if (mounted) context.go(AppRoutes.accountLock);
+        }
+      }
+    } catch (e) {
+      print('خطأ في التحقق من حالة المستخدم: $e');
+      if (mounted) context.go(AppRoutes.login);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    Size size = MediaQuery.of(context).size;
-
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // Gradient background
-          Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF16CA8B), Color(0xFF109365)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
+      backgroundColor: Theme.of(context).colorScheme.primary,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SvgPicture.asset(
+              "assets/svg/Logo.svg",
+              height: 120,
+              color: Colors.white,
             ),
-          ),
-
-          // Top circle animation
-          Positioned(
-            top: -600,
-            right: -300,
-            child: SlideTransition(
-              position: _topCircleOffset,
-              child: buildCircle(
-                height: size.height * 1.4,
-                width: size.width * 1.4,
-              ),
+            const SizedBox(height: 24),
+            const CircularProgressIndicator(
+              color: Colors.white,
             ),
-          ),
-
-          // Bottom circle animation
-          Positioned(
-            bottom: -600,
-            left: -300,
-            child: SlideTransition(
-              position: _bottomCircleOffset,
-              child: buildCircle(
-                height: size.height * 1.4,
-                width: size.width * 1.4,
-              ),
-            ),
-          ),
-
-          // Logo fade animation
-          Positioned(
-            top: size.height * 0.35,
-            left: 0,
-            right: 0,
-            child: FadeTransition(
-              opacity: _logoOpacity,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SvgPicture.asset(
-                    "assets/svg/Group.svg",
-                    width: size.width * 0.3,
-                    height: size.height * 0.15,
-                    fit: BoxFit.contain,
-                  ),
-                  const SizedBox(height: 16),
-                  Image.asset(
-                    "assets/images/Name.png",
-                    width: size.width * 0.4,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

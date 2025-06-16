@@ -53,8 +53,7 @@ class AccountLockNotifier extends _$AccountLockNotifier {
       _startTimer();
     }
   }
-
-  // تحديث حالة الموافقة
+  
   Future<void> updateApprovalStatus({
     bool? isApproved,
     bool? isRejected,

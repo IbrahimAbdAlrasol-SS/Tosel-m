@@ -15,21 +15,24 @@ class User {
   bool? deleted;
   String? creationDate;
   String? password;
+  bool? isActive; // ✅ إضافة هذا الحقل
 
-  User(
-      {this.token,
-      this.fullName,
-      this.userName,
-      this.phoneNumber,
-      this.img,
-      this.role,
-      this.zone,
-      this.branch,
-      this.type,
-      this.id,
-      this.deleted,
-      this.password,
-      this.creationDate});
+  User({
+    this.token,
+    this.fullName,
+    this.userName,
+    this.phoneNumber,
+    this.img,
+    this.role,
+    this.zone,
+    this.branch,
+    this.type,
+    this.id,
+    this.deleted,
+    this.password,
+    this.creationDate,
+    this.isActive, // ✅
+  });
 
   User.fromJson(Map<String, dynamic> json) {
     token = json['token'];
@@ -43,6 +46,7 @@ class User {
     deleted = json['deleted'];
     creationDate = json['creationDate'];
     img = json['img'];
+    isActive = json['isActive']; // ✅
   }
 
   Map<String, dynamic> toJson() {
@@ -61,8 +65,8 @@ class User {
     data['id'] = this.id;
     data['deleted'] = this.deleted;
     data['creationDate'] = this.creationDate;
-    data['creationDate'] = this.creationDate;
     data['img'] = this.img;
+    data['isActive'] = this.isActive; // ✅
     return data;
   }
 }
