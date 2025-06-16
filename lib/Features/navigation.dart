@@ -83,8 +83,10 @@ class _NavigationPageState extends ConsumerState<NavigationPage> {
               _buildNavItem("assets/svg/navigation_home.svg", "الرئيسية", 0),
               _buildNavItem("assets/svg/navigation_box.svg", "الطلبات", 1),
               _buildNavItem("assets/svg/navigation_add.svg", "جديد", 2),
-              _buildNavItem("assets/svg/navigation_statstic.svg", "الإحصائيات", 3),
-              _buildNavItem("assets/svg/navigation_profile.svg", "الإعدادات", 4),
+              _buildNavItem(
+                  "assets/svg/navigation_statstic.svg", "الإحصائيات", 3),
+              _buildNavItem(
+                  "assets/svg/navigation_profile.svg", "الإعدادات", 4),
             ],
           ),
         );
@@ -145,5 +147,3 @@ class _NavigationPageState extends ConsumerState<NavigationPage> {
     return res;
   }
 }
-
-

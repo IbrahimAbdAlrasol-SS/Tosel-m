@@ -15,6 +15,7 @@ import 'package:Tosell/Features/profile/screens/logout_Screen.dart';
 import 'package:Tosell/Features/order/screens/order_completed.dart';
 import 'package:Tosell/Features/order/screens/add_order_screen.dart';
 import 'package:Tosell/Features/auth/login/screens/login_screen.dart';
+import 'package:Tosell/Features/auth/screens/account_lock_screen.dart';
 import 'package:Tosell/Features/profile/screens/myProfile_Screen.dart';
 import 'package:Tosell/Features/order/screens/order_details_screen.dart';
 import 'package:Tosell/Features/orders/screens/shipment_details_screen.dart';
@@ -65,6 +66,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.login,
       builder: (context, state) => const BackgroundWrapper(child: LoginPage()),
+    ),
+    GoRoute(
+      path: AppRoutes.accountLock,
+      builder: (context, state) => const AccountLockScreen(),
     ),
     GoRoute(
       path: AppRoutes.orderCompleted,
@@ -133,7 +138,6 @@ final GoRouter appRouter = GoRouter(
       ),
     ),
 
-    
     GoRoute(
       path: AppRoutes.registerScreen,
       builder: (context, state) =>
@@ -302,4 +306,5 @@ class AppRoutes {
   static const String ForgotpasswordnumbernamePass =
       '/ForgotPasswordNumberNamePass';
   static const String shipmentOrders = '/shipment-orders';
+  static const String accountLock = '/account-lock';
 }

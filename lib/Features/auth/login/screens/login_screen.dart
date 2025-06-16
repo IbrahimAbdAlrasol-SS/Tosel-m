@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:Tosell/core/widgets/CustomTextFormField.dart';
 import 'package:Tosell/core/helpers/SharedPreferencesHelper.dart';
 import 'package:Tosell/Features/auth/login/providers/auth_provider.dart';
+import 'package:Tosell/Features/auth/Services/account_lock_service.dart';
 import 'package:Tosell/Features/auth/register/widgets/build_background.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -86,13 +87,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         const Gap(25),
                         CustomAppBar(
                           // title: "إنشاء حساب",
-                          titleWidget: Text('إنشاء حساب', style: context.textTheme.bodyMedium!.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                            fontSize: 16
-                          ),) ,
+                          titleWidget: Text(
+                            'إنشاء حساب',
+                            style: context.textTheme.bodyMedium!.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                                fontSize: 16),
+                          ),
                           showBackButton: true,
-                          onBackButtonPressed: () =>context.push(AppRoutes.registerScreen),
+                          onBackButtonPressed: () =>
+                              context.push(AppRoutes.registerScreen),
                         ),
                         Padding(
                           padding: const EdgeInsets.only(right: 20),
@@ -256,7 +260,31 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                     if (loginState is AsyncData) {
                                       SharedPreferencesHelper.saveUser(
                                           result.$1!);
-                                      context.go(AppRoutes.home);
+
+                                      // التحقق من حالة نشاط الحساب أولاً
+                                      final (isActive, error) = await ref
+                                          .read(authNotifierProvider.notifier)
+                                          .checkAccountStatus();
+                                      
+                                      if (isActive) {
+                                        // الحساب نشط، اذهب إلى الصفحة الرئيسية
+                                        context.go(AppRoutes.home);
+                                      } else {
+                                        // الحساب غير نشط، فحص حالة القفل
+                                        final shouldShowLock =
+                                            await AccountLockService
+                                                .shouldShowLockScreen();
+                                        if (shouldShowLock) {
+                                          context.go(AppRoutes.accountLock);
+                                        } else {
+                                          // لا توجد حالة قفل، ابق في شاشة تسجيل الدخول
+                                          GlobalToast.show(
+                                            message: "الحساب غير نشط حالياً",
+                                            backgroundColor: Colors.orange,
+                                            textColor: Colors.white,
+                                          );
+                                        }
+                                      }
                                     }
                                   }
                                 }

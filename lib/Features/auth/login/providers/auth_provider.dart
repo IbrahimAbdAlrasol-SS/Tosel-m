@@ -1,10 +1,10 @@
-// lib/Features/auth/login/providers/auth_provider.dart
 import 'dart:async';
 import 'package:Tosell/Features/auth/Services/Auth_service.dart';
+import 'package:Tosell/Features/auth/Services/account_lock_service.dart';
 import 'package:Tosell/Features/auth/models/User.dart';
 import 'package:Tosell/Features/profile/models/zone.dart';
 import 'package:Tosell/core/helpers/SharedPreferencesHelper.dart';
-import 'package:Tosell/core/Client/BaseClient.dart'; // ✅ إضافة import للحصول على imageUrl
+import 'package:Tosell/core/Client/BaseClient.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'auth_provider.g.dart';
@@ -13,28 +13,23 @@ part 'auth_provider.g.dart';
 class authNotifier extends _$authNotifier {
   final AuthService _service = AuthService();
 
-  /// ✅ دالة تحويل مسار الصورة النسبي إلى URL كامل
   String _buildFullImageUrl(String imagePath) {
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-      // الرابط كامل بالفعل
       return imagePath;
     } else if (imagePath.startsWith('/')) {
-      // مسار نسبي يبدأ بـ /
-      return '$imageUrl${imagePath.substring(1)}'; // إزالة / الأولى
+      return '$imageUrl${imagePath.substring(1)}';
     } else {
-      // مسار نسبي بدون /
       return '$imageUrl$imagePath';
     }
   }
 
-  /// ✅ دالة تسجيل التاجر مع إصلاح URL الصورة والتعامل مع حالة الموافقة الإدارية
   Future<(User? data, String? error)> register({
     required String fullName,
     required String brandName,
     required String userName,
     required String phoneNumber,
     required String password,
-    required String brandImg, // ✅ قد يكون مسار نسبي من الباك اند
+    required String brandImg,
     required List<Zone> zones,
     double? latitude,
     double? longitude,
@@ -42,115 +37,85 @@ class authNotifier extends _$authNotifier {
   }) async {
     try {
       state = const AsyncValue.loading();
-      
-      print('🔍 AuthProvider: بدء تدقيق بيانات التسجيل...');
 
-      // ✅ تدقيق البيانات الأساسية
-      print('📝 التحقق من البيانات الأساسية:');
       if (fullName.trim().isEmpty) {
         const errorMsg = 'اسم صاحب المتجر مطلوب';
         state = const AsyncValue.data(null);
-        print('❌ $errorMsg');
         return (null, errorMsg);
       }
-      
+
       if (brandName.trim().isEmpty) {
         const errorMsg = 'اسم المتجر مطلوب';
         state = const AsyncValue.data(null);
-        print('❌ $errorMsg');
         return (null, errorMsg);
       }
-      
+
       if (userName.trim().isEmpty) {
         const errorMsg = 'اسم المستخدم مطلوب';
         state = const AsyncValue.data(null);
-        print('❌ $errorMsg');
         return (null, errorMsg);
       }
-      
+
       if (phoneNumber.trim().isEmpty) {
         const errorMsg = 'رقم الهاتف مطلوب';
         state = const AsyncValue.data(null);
-        print('❌ $errorMsg');
+
         return (null, errorMsg);
       }
-      
+
       if (password.isEmpty) {
         const errorMsg = 'كلمة المرور مطلوبة';
         state = const AsyncValue.data(null);
-        print('❌ $errorMsg');
         return (null, errorMsg);
       }
 
-      // ✅ تدقيق وإصلاح رابط الصورة
-      print('🖼️ التحقق من صورة المتجر:');
-      print('   - brandImg الأصلي: "$brandImg"');
-      
       if (brandImg.trim().isEmpty) {
         const errorMsg = 'صورة المتجر مطلوبة';
         state = const AsyncValue.data(null);
-        print('❌ $errorMsg');
         return (null, errorMsg);
       }
-      
-      // ✅ تحويل مسار الصورة إلى URL كامل
-      final fullImageUrl = _buildFullImageUrl(brandImg);
-      print('   - brandImg المحول: "$fullImageUrl"');
-      print('   - baseUrl المستخدم: "$imageUrl"');
-      print('   ✅ تم تحويل الصورة بنجاح');
 
-      // ✅ تدقيق المناطق
-      print('🌍 التحقق من المناطق:');
+      final fullImageUrl = _buildFullImageUrl(brandImg);
+
       if (zones.isEmpty) {
         const errorMsg = 'يجب اختيار منطقة واحدة على الأقل';
         state = const AsyncValue.data(null);
-        print('❌ $errorMsg');
         return (null, errorMsg);
       }
 
-      print('   - عدد المناطق: ${zones.length}');
-
-      // ✅ تحويل zones إلى الشكل المطلوب للـ API مع تدقيق
       final zonesData = <Map<String, dynamic>>[];
-      
+
       for (int i = 0; i < zones.length; i++) {
         final zone = zones[i];
-        
-        print('   📍 المنطقة ${i + 1}:');
-        print('      - اسم المنطقة: ${zone.name}');
-        print('      - معرف المنطقة: ${zone.id}');
-        print('      - نوع المنطقة: ${zone.type} (${zone.type == 1 ? 'مركز' : 'أطراف'})');
-        print('      - المحافظة: ${zone.governorate?.name}');
-        
-        // ✅ التحقق من صحة معرف المنطقة
+
         if (zone.id == null || zone.id! <= 0) {
           final errorMsg = 'معرف المنطقة ${i + 1} غير صحيح';
           state = const AsyncValue.data(null);
-          print('❌ $errorMsg');
           return (null, errorMsg);
         }
 
-        // ✅ تحضير بيانات المنطقة
         final zoneData = {
           'zoneId': zone.id!,
-          'nearestLandmark': nearestLandmark?.trim().isNotEmpty == true 
-              ? nearestLandmark!.trim() 
+          'nearestLandmark': nearestLandmark?.trim().isNotEmpty == true
+              ? nearestLandmark!.trim()
               : 'نقطة مرجعية ${i + 1}',
           'long': longitude ?? 44.3661,
           'lat': latitude ?? 33.3152,
         };
-        
+
         zonesData.add(zoneData);
-        
+
         print('      - أقرب نقطة: ${zoneData['nearestLandmark']}');
-        print('      - الإحداثيات: lat=${zoneData['lat']}, long=${zoneData['long']}');
+        print(
+            '      - الإحداثيات: lat=${zoneData['lat']}, long=${zoneData['long']}');
       }
 
       print('✅ تم تحضير ${zonesData.length} منطقة بنجاح');
 
       // ✅ تحديد نوع المنطقة من أول منطقة مختارة
       final firstZoneType = zones.first.type ?? 1;
-      print('🏷️ نوع المنطقة المحدد: $firstZoneType (${firstZoneType == 1 ? 'مركز' : firstZoneType == 2 ? 'أطراف' : 'غير معروف'})');
+      print(
+          '🏷️ نوع المنطقة المحدد: $firstZoneType (${firstZoneType == 1 ? 'مركز' : firstZoneType == 2 ? 'أطراف' : 'غير معروف'})');
 
       // ✅ طباعة ملخص البيانات قبل الإرسال
       print('📊 ملخص البيانات النهائية:');
@@ -178,8 +143,10 @@ class authNotifier extends _$authNotifier {
 
       // ✅ التعامل مع الحالات المختلفة
       if (error == "REGISTRATION_SUCCESS_PENDING_APPROVAL") {
-        // ✅ تسجيل ناجح لكن يحتاج موافقة إدارية
+        // ✅ تسجيل ناجح لكن يحتاج موافقة إدارية - إنشاء حالة قفل
         print('✅ AuthProvider: تم التسجيل بنجاح - في انتظار الموافقة الإدارية');
+        // إنشاء حالة قفل للحساب الجديد
+        await _createAccountLockStatus();
         state = const AsyncValue.data(null);
         return (null, "REGISTRATION_SUCCESS_PENDING_APPROVAL");
       }
@@ -194,7 +161,7 @@ class authNotifier extends _$authNotifier {
       print('✅ AuthProvider: نجح التسجيل كاملاً - ${user.fullName}');
       await SharedPreferencesHelper.saveUser(user);
       state = AsyncValue.data(user);
-      
+
       return (user, null);
     } catch (e, stackTrace) {
       print('💥 AuthProvider Exception: $e');
@@ -204,7 +171,6 @@ class authNotifier extends _$authNotifier {
     }
   }
 
-  /// ✅ دالة تسجيل الدخول (بدون تغيير)
   Future<(User? data, String? error)> login({
     String? phonNumber,
     required String passWord,
@@ -225,6 +191,26 @@ class authNotifier extends _$authNotifier {
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
       return (null, e.toString());
+    }
+  }
+
+  // ✅ دالة إنشاء حالة قفل للحساب الجديد
+  Future<void> _createAccountLockStatus() async {
+    try {
+      await AccountLockService.createLockStatus();
+      print('✅ تم إنشاء حالة قفل للحساب الجديد');
+    } catch (e) {
+      print('❌ خطأ في إنشاء حالة القفل: $e');
+    }
+  }
+
+  /// دالة التحقق من حالة نشاط الحساب
+  Future<(bool isActive, String? error)> checkAccountStatus() async {
+    try {
+      final (isActive, error) = await _service.checkAccountStatus();
+      return (isActive, error);
+    } catch (e) {
+      return (false, 'خطأ غير متوقع: ${e.toString()}');
     }
   }
 

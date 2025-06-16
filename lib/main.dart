@@ -7,16 +7,37 @@ import 'package:Tosell/core/helpers/HttpOverrides.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:Tosell/core/helpers/SharedPreferencesHelper.dart';
-
+import 'package:Tosell/Features/auth/Services/account_lock_service.dart';
+import 'package:Tosell/Features/auth/Services/auth_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
   HttpOverrides.global = MyHttpOverrides();
   var token = (await SharedPreferencesHelper.getUser())?.token;
-  token == null
-      ? initialLocation = AppRoutes.login
-      : initialLocation = AppRoutes.home;
+
+  if (token == null) {
+    // لا يوجد token، اذهب إلى شاشة تسجيل الدخول
+    initialLocation = AppRoutes.login;
+  } else {
+    // يوجد token، تحقق من حالة النشاط أولاً
+    final authService = AuthService();
+    final (isActive, error) = await authService.checkAccountStatus();
+    
+    if (isActive) {
+      // الحساب نشط، اذهب إلى الصفحة الرئيسية
+      initialLocation = AppRoutes.home;
+    } else {
+      // الحساب غير نشط أو خطأ 401، تحقق من حالة القفل
+      final shouldShowLock = await AccountLockService.shouldShowLockScreen();
+      if (shouldShowLock) {
+        initialLocation = AppRoutes.accountLock;
+      } else {
+        // لا توجد حالة قفل، اذهب إلى تسجيل الدخول
+        initialLocation = AppRoutes.login;
+      }
+    }
+  }
 
   runApp(
     ProviderScope(

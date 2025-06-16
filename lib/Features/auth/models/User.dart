@@ -43,7 +43,6 @@ class User {
     deleted = json['deleted'];
     creationDate = json['creationDate'];
     img = json['img'];
-
   }
 
   Map<String, dynamic> toJson() {
